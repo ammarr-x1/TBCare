@@ -1,0 +1,431 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:tbcare_main/core/app_constants.dart';
+import '../../../models/ai_case_model.dart';
+import 'case_detail_dialog.dart';
+import 'case_action_modal.dart';
+import '../../assessments/test_review_screen.dart';
+
+class _DiagStatus {
+  static const tb = 'TB';
+  static const notTb = 'Not TB';
+  static const lab = 'Needs Lab Test';
+}
+
+class AiCaseCard extends StatefulWidget {
+  final AiCaseModel caseData;
+
+  const AiCaseCard({super.key, required this.caseData});
+
+  @override
+  State<AiCaseCard> createState() => _AiCaseCardState();
+}
+
+class _AiCaseCardState extends State<AiCaseCard> {
+  late String caseStatus;
+  String? doctorNote;
+  String? testRequested;
+  bool showReviewButton = false;
+
+  @override
+  void initState() {
+    super.initState();
+    caseStatus = widget.caseData.status;
+    doctorNote = widget.caseData.doctorNotes;
+    _fetchLatestDiagnosisStatus();
+  }
+
+  Future<void> _fetchLatestDiagnosisStatus() async {
+    try {
+      final diagnosisSnapshot = await FirebaseFirestore.instance
+          .collection('patients')
+          .doc(widget.caseData.patientId)
+          .collection('screenings')
+          .doc(widget.caseData.screeningId)
+          .collection('diagnosis')
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (diagnosisSnapshot.docs.isNotEmpty) {
+        final data = diagnosisSnapshot.docs.first.data();
+        final status = (data['status'] ?? '') as String;
+        final notes = (data['notes'] ?? '') as String?;
+        final requestedTest = (data['requestedTest'] ?? '') as String?;
+        setState(() {
+          caseStatus = status.isNotEmpty ? status : caseStatus;
+          doctorNote = notes ?? doctorNote;
+          testRequested = requestedTest?.isNotEmpty == true
+              ? requestedTest
+              : testRequested;
+          showReviewButton = status == _DiagStatus.lab;
+        });
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print("Error checking diagnosis status: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.white,
+      elevation: 3,
+      shadowColor: Colors.black.withOpacity(0.08),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(largePadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 16),
+            _buildMedia(),
+            const SizedBox(height: 16),
+            _buildDetails(),
+            const SizedBox(height: 16),
+            _buildActions(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.person,
+                  color: primaryColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.caseData.patientName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: bodySize,
+                        color: secondaryColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      widget.caseData.date.toLocal().toString().split(' ')[0],
+                      style: TextStyle(
+                        color: secondaryColor.withOpacity(0.6),
+                        fontSize: captionSize,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        _buildStatusBadge(caseStatus),
+      ],
+    );
+  }
+
+  Widget _buildMedia() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: secondaryColor.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  Icons.audiotrack,
+                  color: accentColor,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "Cough audio analysis",
+                  style: TextStyle(
+                    color: secondaryColor.withOpacity(0.8),
+                    fontSize: captionSize,
+                  ),
+                ),
+              ),
+              _buildMediaTypeBadge('Audio', accentColor),
+            ],
+          ),
+          
+          if (widget.caseData.mediaType == "xray" || widget.caseData.mediaType == "both") ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Icons.medical_services,
+                    color: primaryColor,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "X-ray image analysis",
+                    style: TextStyle(
+                      color: secondaryColor.withOpacity(0.8),
+                      fontSize: captionSize,
+                    ),
+                  ),
+                ),
+                _buildMediaTypeBadge('X-ray', primaryColor),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                widget.caseData.mediaUrl,
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetails() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: accentColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentColor.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.psychology,
+                color: accentColor,
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                "AI Analysis Results:",
+                style: TextStyle(
+                  color: secondaryColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: captionSize,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.caseData.aiResult ?? 'Analysis pending...',
+            style: TextStyle(
+              color: secondaryColor.withOpacity(0.8),
+              fontSize: captionSize,
+            ),
+          ),
+          if (testRequested != null && testRequested!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  Icons.science,
+                  color: warningColor,
+                  size: 14,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  "Requested Test: ",
+                  style: TextStyle(
+                    color: warningColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: captionSize,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    testRequested!,
+                    style: TextStyle(
+                      color: secondaryColor.withOpacity(0.8),
+                      fontSize: captionSize,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActions(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => showDialog(
+              context: context,
+              builder: (_) => CaseDetailDialog(caseData: widget.caseData),
+            ),
+            icon: const Icon(Icons.visibility, size: 16),
+            label: const Text("View Details"),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: secondaryColor,
+              side: BorderSide(color: secondaryColor.withOpacity(0.3)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => showDialog(
+              context: context,
+              builder: (_) => CaseActionModal(
+                caseData: widget.caseData,
+                onActionSaved: (diagnosis, notes, requestedTest) {
+                  setState(() {
+                    caseStatus = diagnosis;
+                    doctorNote = notes;
+                    testRequested = requestedTest;
+                    showReviewButton = (diagnosis == _DiagStatus.lab);
+                  });
+                },
+              ),
+            ),
+            icon: const Icon(Icons.medical_services, size: 16),
+            label: const Text("Diagnose"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+        if (showReviewButton) ...[
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TestReviewScreen(caseData: widget.caseData),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.science_outlined, size: 16),
+              label: const Text("Review Tests"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: warningColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color statusColor;
+    switch (status.toLowerCase()) {
+      case 'tb':
+        statusColor = errorColor;
+        break;
+      case 'not tb':
+        statusColor = successColor;
+        break;
+      case 'needs lab test':
+        statusColor = warningColor;
+        break;
+      default:
+        statusColor = accentColor;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(
+          color: statusColor,
+          fontSize: captionSize,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMediaTypeBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,36 @@
+class UserModel {
+  final String uid;
+  final String name;
+  final String email;
+  final String role;
+  final bool verified;
+
+  UserModel({
+    required this.uid,
+    required this.name,
+    required this.email,
+    required this.role,
+    this.verified = false,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      "uid": uid,
+      "name": name,
+      "email": email,
+      "role": role,
+      "verified": verified,
+      "createdAt": DateTime.now(),
+    };
+  }
+
+  factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
+    return UserModel(
+      uid: uid,
+      name: map["name"] ?? "",
+      email: map["email"] ?? "",
+      role: map["role"] ?? "Patient",
+      verified: map["verified"] ?? false,
+    );
+  }
+}
