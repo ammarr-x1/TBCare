@@ -1,176 +1,257 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tbcare_main/features/chw/models/chw_dashboard_patient_model.dart';
+
+/// Model for recent activity display
+class RecentActivity {
+  final String patientId;
+  final String name;
+  final String status;
+  final int? statusColor;
+  final DateTime? date;
+
+  RecentActivity({
+    required this.patientId,
+    required this.name,
+    required this.status,
+    this.statusColor,
+    this.date,
+  });
+}
+
+/// Model for dashboard statistics
+class DashboardStats {
+  final int patients;
+  final int screenings;
+  final int aiFlagged;
+  final int labTests;
+  final int followUps;
+  final int referrals;
+
+  const DashboardStats({
+    this.patients = 0,
+    this.screenings = 0,
+    this.aiFlagged = 0,
+    this.labTests = 0,
+    this.followUps = 0,
+    this.referrals = 0,
+  });
+}
 
 class CHWDashboardService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
 
-  User get currentUser => _auth.currentUser!;
+  CHWDashboardService({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance;
 
-  CollectionReference<Map<String, dynamic>> get _chwDoc =>
-      _firestore.collection('chws');
-
-  DocumentReference<Map<String, dynamic>> get _meDoc =>
-      _chwDoc.doc(currentUser.uid);
+  String get _currentUserId => _auth.currentUser!.uid;
 
   CollectionReference<Map<String, dynamic>> get _assignedPatients =>
-      _meDoc.collection('assigned_patients');
+      _firestore.collection('chws').doc(_currentUserId).collection('assigned_patients');
 
-  /// Count total patients
-  Future<int> countPatients() async {
-    final snap = await _assignedPatients.get();
-    return snap.size;
-  }
-
-  /// Stream all screenings for this CHW
-  Stream<List<Map<String, dynamic>>> screeningsStream() {
-    return _firestore
-        .collection('screenings')
-        .where('chwId', isEqualTo: currentUser.uid)
-        .snapshots()
-        .map((snap) => snap.docs.map((d) => d.data()).toList());
-  }
-
-  /// Dashboard counts (does NOT include lab test counts)
-  Stream<Map<String, int>> dashboardCounts() {
-    return _assignedPatients.snapshots().asyncMap((assignedSnap) async {
-      int aiFlagged = 0;
-      int followUps = 0;
-      int referrals = 0;
-      int confirmed = 0;
-      int screenings = 0;
-
-      for (var p in assignedSnap.docs) {
-        final patientId = p.id;
-
-        final screeningSnap = await _firestore
-            .collection('screenings')
-            .where('chwId', isEqualTo: currentUser.uid)
-            .where('patientId', isEqualTo: patientId)
-            .orderBy('timestamp', descending: true)
-            .limit(1)
-            .get();
-
-        if (screeningSnap.docs.isNotEmpty) {
-          final data = screeningSnap.docs.first.data();
-          screenings++;
-
-          // AI flagged: any patient screened
-          aiFlagged++;
-
-          // Follow-ups: increment only when explicitly sent to doctor
-          if (data['followUpNeeded'] == true &&
-              data['followUpStatus'] == 'sent_to_doctor') {
-            followUps++;
-          }
-
-          // Referrals
-          if (data['referred'] == true) referrals++;
-
-          // Confirmed TB
-          if (data['confirmed'] == true) confirmed++;
-        }
+  /// Stream dashboard stats with optimized parallel fetching
+  Stream<DashboardStats> dashboardStatsStream() {
+    return _assignedPatients.snapshots().asyncMap((snapshot) async {
+      if (snapshot.docs.isEmpty) {
+        return const DashboardStats();
       }
 
-      return {
-        'aiFlagged': aiFlagged,
-        'followUps': followUps,
-        'referrals': referrals,
-        'confirmed': confirmed,
-        'screenings': screenings,
-      };
-    });
-  }
+      final patientIds = snapshot.docs.map((d) => d.id).toList();
+      final patientCount = patientIds.length;
 
-  /// Separate count for Lab Tests (status == "Needs Lab Test")
-  Stream<int> labTestCount() {
-    return _assignedPatients.snapshots().asyncMap((assignedSnap) async {
-      int labTests = 0;
-
-      for (var p in assignedSnap.docs) {
-        final patientId = p.id;
-
-        // Query inside patients/{patientId}/screenings
-        final screeningsSnap = await _firestore
+      // Fetch all screenings in parallel using Future.wait
+      final screeningFutures = patientIds.map((patientId) {
+        return _firestore
             .collection('patients')
             .doc(patientId)
             .collection('screenings')
-            .where('status', isEqualTo: 'Needs Lab Test')
+            .orderBy('createdAt', descending: true)
+            .limit(1)
             .get();
+      }).toList();
 
-        labTests += screeningsSnap.size;
+      final screeningResults = await Future.wait(screeningFutures);
+
+      int screenings = 0;
+      int aiFlagged = 0;
+      int labTests = 0;
+      int followUps = 0;
+      int referrals = 0;
+
+      for (final snap in screeningResults) {
+        if (snap.docs.isEmpty) continue;
+
+        final data = snap.docs.first.data();
+        screenings++;
+
+        // AI Flagged: check aiPrediction.TB > 0.5 (or your threshold)
+        final aiPrediction = data['aiPrediction'] as Map<String, dynamic>?;
+        if (aiPrediction != null) {
+          final tbScore = double.tryParse(aiPrediction['TB']?.toString() ?? '0') ?? 0;
+          if (tbScore > 0.5) aiFlagged++;
+        }
+
+        // Lab Tests: status == "Needs Lab Test"
+        if (data['status'] == 'Needs Lab Test') labTests++;
+
+        // Follow-ups: diagnosisStatus == "Pending" or specific followUp field
+        final diagStatus = data['diagnosisStatus']?.toString().toLowerCase();
+        if (diagStatus == 'pending') followUps++;
+
+        // Referrals: check if referred field exists
+        if (data['referred'] == true) referrals++;
       }
 
-      return labTests;
+      return DashboardStats(
+        patients: patientCount,
+        screenings: screenings,
+        aiFlagged: aiFlagged,
+        labTests: labTests,
+        followUps: followUps,
+        referrals: referrals,
+      );
     });
   }
 
-  /// Recent activity table
-  Stream<List<RecentActivity>> recentActivity() {
-    return _assignedPatients.snapshots().asyncMap((assignedSnap) async {
-      final List<RecentActivity> patientsWithStatus = [];
+  /// Stream recent activity with optimized fetching
+  Stream<List<RecentActivity>> recentActivityStream({int limit = 10}) {
+    return _assignedPatients.snapshots().asyncMap((snapshot) async {
+      if (snapshot.docs.isEmpty) return <RecentActivity>[];
 
-      for (var p in assignedSnap.docs) {
-        final pdata = p.data();
-        final patientId = p.id;
+      // Build patient info map and fetch screenings in parallel
+      final futures = <Future<_PatientScreeningData>>[];
 
-        final screeningSnap = await _firestore
-            .collection('screenings')
-            .where('chwId', isEqualTo: currentUser.uid)
-            .where('patientId', isEqualTo: patientId)
-            .orderBy('timestamp', descending: true)
-            .limit(1)
-            .get();
-
-        String status = "New (Not Screened)";
-        int? statusColor;
-        DateTime? date;
-
-        if (screeningSnap.docs.isNotEmpty) {
-          final data = screeningSnap.docs.first.data();
-          date = (data['timestamp'] as Timestamp?)?.toDate();
-
-          if (data['referred'] == true) {
-            status = "Referred to Facility";
-            statusColor = 0xFF2697FF;
-          } else if (data['followUpNeeded'] == true &&
-              data['followUpStatus'] == 'completed') {
-            status = "Follow-up Completed";
-            statusColor = 0xFF00FF00;
-          } else if (data['followUpNeeded'] == true &&
-              data['followUpStatus'] != 'completed') {
-            status = "Follow-up Pending";
-            statusColor = 0xFFFFC857;
-          } else if (data['confirmed'] == true) {
-            status = "Confirmed TB Case";
-            statusColor = 0xFFEF476F;
-          } else {
-            status = "Screened";
-            statusColor = 0xFFB0BEC5;
-          }
-        } else {
-          date = (pdata['createdAt'] as Timestamp?)?.toDate();
-        }
-
-        patientsWithStatus.add(RecentActivity(
-          name: pdata['name'] ?? 'Unknown',
-          status: status,
-          statusColor: statusColor,
-          date: date,
-        ));
+      for (final doc in snapshot.docs) {
+        futures.add(_fetchPatientWithLatestScreening(doc));
       }
 
-      patientsWithStatus.sort((a, b) {
-        final da = a.date;
-        final db = b.date;
-        if (da == null && db == null) return 0;
-        if (da == null) return 1;
-        if (db == null) return -1;
-        return db.compareTo(da);
+      final results = await Future.wait(futures);
+
+      // Sort by date descending and limit
+      results.sort((a, b) {
+        if (a.date == null && b.date == null) return 0;
+        if (a.date == null) return 1;
+        if (b.date == null) return -1;
+        return b.date!.compareTo(a.date!);
       });
 
-      return patientsWithStatus;
+      return results.take(limit).map((r) => r.toRecentActivity()).toList();
     });
+  }
+
+  Future<_PatientScreeningData> _fetchPatientWithLatestScreening(
+    QueryDocumentSnapshot<Map<String, dynamic>> patientDoc,
+  ) async {
+    final patientId = patientDoc.id;
+    final patientData = patientDoc.data();
+    final patientName = patientData['name'] ?? 'Unknown';
+
+    final screeningSnap = await _firestore
+        .collection('patients')
+        .doc(patientId)
+        .collection('screenings')
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .get();
+
+    if (screeningSnap.docs.isEmpty) {
+      // No screening yet
+      final createdAt = (patientData['createdAt'] as Timestamp?)?.toDate();
+      return _PatientScreeningData(
+        patientId: patientId,
+        name: patientName,
+        status: 'New (Not Screened)',
+        statusColor: 0xFF9E9E9E, // Grey
+        date: createdAt,
+      );
+    }
+
+    final data = screeningSnap.docs.first.data();
+    final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+
+    // Determine status based on screening data
+    final statusInfo = _determineStatus(data);
+
+    return _PatientScreeningData(
+      patientId: patientId,
+      name: patientName,
+      status: statusInfo.status,
+      statusColor: statusInfo.color,
+      date: createdAt,
+    );
+  }
+
+  _StatusInfo _determineStatus(Map<String, dynamic> data) {
+    final status = data['status']?.toString() ?? '';
+    final diagnosisStatus = data['diagnosisStatus']?.toString().toLowerCase() ?? '';
+
+    // Priority order for status determination
+    if (status == 'Needs Lab Test') {
+      return _StatusInfo('Needs Lab Test', 0xFFE53935); // Red
+    }
+
+    if (data['referred'] == true) {
+      return _StatusInfo('Referred to Facility', 0xFF2697FF); // Blue
+    }
+
+    if (diagnosisStatus == 'confirmed') {
+      return _StatusInfo('Confirmed TB Case', 0xFFEF476F); // Pink/Red
+    }
+
+    if (diagnosisStatus == 'pending') {
+      return _StatusInfo('Follow-up Pending', 0xFFFFC857); // Yellow
+    }
+
+    if (diagnosisStatus == 'negative' || diagnosisStatus == 'completed') {
+      return _StatusInfo('Completed', 0xFF4CAF50); // Green
+    }
+
+    // Check AI prediction for flagging
+    final aiPrediction = data['aiPrediction'] as Map<String, dynamic>?;
+    if (aiPrediction != null) {
+      final tbScore = double.tryParse(aiPrediction['TB']?.toString() ?? '0') ?? 0;
+      if (tbScore > 0.5) {
+        return _StatusInfo('AI Flagged - High Risk', 0xFFFF9800); // Orange
+      }
+    }
+
+    return _StatusInfo('Screened', 0xFFB0BEC5); // Grey-blue
+  }
+}
+
+/// Internal helper class for status
+class _StatusInfo {
+  final String status;
+  final int color;
+  _StatusInfo(this.status, this.color);
+}
+
+/// Internal helper class for patient screening data
+class _PatientScreeningData {
+  final String patientId;
+  final String name;
+  final String status;
+  final int statusColor;
+  final DateTime? date;
+
+  _PatientScreeningData({
+    required this.patientId,
+    required this.name,
+    required this.status,
+    required this.statusColor,
+    this.date,
+  });
+
+  RecentActivity toRecentActivity() {
+    return RecentActivity(
+      patientId: patientId,
+      name: name,
+      status: status,
+      statusColor: statusColor,
+      date: date,
+    );
   }
 }
