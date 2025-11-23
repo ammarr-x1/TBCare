@@ -1,10 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
 import '../models/recommendation_model.dart';
 
 class RecommendationService {
   static final _firestore = FirebaseFirestore.instance;
+  static final _auth = FirebaseAuth.instance;
   static final _uuid = Uuid();
+
+  /// Get current logged-in doctor's ID
+  static String? get _currentDoctorId => _auth.currentUser?.uid;
 
   /// Add a recommendation for the latest screening of a patient
   static Future<void> addRecommendation({
@@ -82,6 +87,11 @@ class RecommendationService {
     String patientId,
     String screeningId,
   ) {
+    final doctorId = _currentDoctorId;
+    if (doctorId == null) {
+      return Stream.value([]);
+    }
+
     return _firestore
         .collection('patients')
         .doc(patientId)
@@ -90,7 +100,24 @@ class RecommendationService {
         .collection('recommendations')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => RecommendationModel.fromMap(doc.data())).toList());
+        .asyncMap((snapshot) async {
+          // Verify patient belongs to logged-in doctor
+          final patientDoc = await _firestore
+              .collection('patients')
+              .doc(patientId)
+              .get();
+
+          if (!patientDoc.exists) return [];
+
+          final selectedDoctor = patientDoc.data()?['selectedDoctor'];
+
+          if (selectedDoctor != doctorId) {
+            return [];
+          }
+
+          return snapshot.docs
+              .map((doc) => RecommendationModel.fromMap(doc.data()))
+              .toList();
+        });
   }
 }

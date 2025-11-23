@@ -10,7 +10,48 @@ class DoctorProfileService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // Get current doctor profile
+  /// Create default Doctor object for new doctors
+  Doctor _createDefaultDoctor(String uid, String? name, String? phone) {
+    return Doctor(
+      uid: uid,
+      name: name ?? 'New Doctor',
+      phone: phone ?? '',
+      specialization: '',
+      confirmedTBCount: 0,
+      createdAt: DateTime.now(),
+      patientsReviewed: [],
+      totalDiagnosisMade: 0,
+      totalFinalVerdicts: 0,
+      totalPatientsReviewed: 0,
+      totalRecommendationGiven: 0,
+      totalTestsRequested: 0,
+      profileImageUrl: null,
+      email: null,
+      hospital: null,
+      experience: null,
+      qualifications: null,
+      rating: null,
+      reviewCount: null,
+    );
+  }
+
+  /// Get current doctor profile (one-time fetch)
+  Future<Doctor> getCurrentDoctorProfileOnce() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('No user logged in');
+    }
+
+    final doctor = await getDoctorById(user.uid);
+    if (doctor != null) {
+      return doctor;
+    }
+
+    // Return default doctor if document doesn't exist
+    return _createDefaultDoctor(user.uid, user.displayName, user.phoneNumber);
+  }
+
+  // Get current doctor profile (stream)
   Stream<Doctor?> getCurrentDoctorProfile() {
     final user = _auth.currentUser;
     if (user == null) return Stream.value(null);
@@ -161,6 +202,15 @@ class DoctorProfileService {
           .toList();
     } catch (e) {
       throw Exception('Failed to get doctors by specialization: $e');
+    }
+  }
+
+  // Sign out doctor
+  Future<void> signOut() async {
+    try {
+      await _auth.signOut();
+    } catch (e) {
+      throw Exception('Failed to sign out: $e');
     }
   }
 }

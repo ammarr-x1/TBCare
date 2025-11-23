@@ -12,8 +12,8 @@ class AuthService {
     required String email,
     required String password,
     required String role,
-    String status = "Active",  // add this
-    bool flagged = false,      // add this
+    String status = "Active", // add this
+    bool flagged = false, // add this
   }) async {
     try {
       // Firebase Auth
@@ -29,7 +29,7 @@ class AuthService {
         email: email,
         role: role,
         verified: true,
-        status: status,   // use parameter
+        status: status, // use parameter
         flagged: flagged, // use parameter
       );
 
@@ -43,6 +43,26 @@ class AuthService {
           'email': email,
           'createdAt': FieldValue.serverTimestamp(),
           'lastActivity': null,
+          'status': status,
+          'flagged': flagged,
+        });
+      }
+
+      if (role == "Doctor") {
+        await _db.collection('doctors').doc(uid).set({
+          'uid': uid,
+          'name': name,
+          'email': email,
+          'phone': '',
+          'specialization': '',
+          'confirmedTBCount': 0,
+          'createdAt': FieldValue.serverTimestamp(),
+          'patientsReviewed': [],
+          'totalDiagnosisMade': 0,
+          'totalFinalVerdicts': 0,
+          'totalPatientsReviewed': 0,
+          'totalRecommendationGiven': 0,
+          'totalTestsRequested': 0,
           'status': status,
           'flagged': flagged,
         });

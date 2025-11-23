@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tbcare_main/core/app_constants.dart';
 import 'package:tbcare_main/features/doctor/models/doctor_profile_model.dart';
 import 'package:tbcare_main/features/doctor/services/doctor_profile_service.dart';
@@ -12,7 +11,7 @@ import 'package:tbcare_main/features/doctor/screens/profile/components/activity_
 import 'package:tbcare_main/features/doctor/screens/profile/components/settings_bottom_sheet.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
-  const DoctorProfileScreen({super.key});
+  const DoctorProfileScreen({Key? key}) : super(key: key);
 
   @override
   State<DoctorProfileScreen> createState() => _DoctorProfileScreenState();
@@ -25,7 +24,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
   late Animation<Offset> _slideAnimation;
 
   final DoctorProfileService _profileService = DoctorProfileService();
-  Doctor? _doctor;
+  late Doctor _doctor;
   bool _isLoading = true;
   bool _isEditing = false;
 
@@ -62,16 +61,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
 
   Future<void> _loadDoctorProfile() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final doctor = await _profileService.getDoctorById(user.uid);
-        if (mounted) {
-          setState(() {
-            _doctor = doctor;
-            _isLoading = false;
-            _populateControllers();
-          });
-        }
+      final doctor = await _profileService.getCurrentDoctorProfileOnce();
+      
+      if (mounted) {
+        setState(() {
+          _doctor = doctor;
+          _isLoading = false;
+          _populateControllers();
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -84,14 +81,12 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
   }
 
   void _populateControllers() {
-    if (_doctor != null) {
-      _nameController.text = _doctor!.name;
-      _phoneController.text = _doctor!.phone;
-      _specializationController.text = _doctor!.specialization;
-      _hospitalController.text = _doctor!.hospital ?? '';
-      _experienceController.text = _doctor!.experience ?? '';
-      _qualificationsController.text = _doctor!.qualifications ?? '';
-    }
+    _nameController.text = _doctor.name;
+    _phoneController.text = _doctor.phone;
+    _specializationController.text = _doctor.specialization;
+    _hospitalController.text = _doctor.hospital ?? '';
+    _experienceController.text = _doctor.experience ?? '';
+    _qualificationsController.text = _doctor.qualifications ?? '';
   }
 
   @override
@@ -121,15 +116,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
   }
 
   Widget _buildProfileContent() {
-    if (_doctor == null) {
-      return const Center(
-        child: Text(
-          'Profile not found',
-          style: TextStyle(color: secondaryColor, fontSize: bodySize),
-        ),
-      );
-    }
-
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -142,9 +128,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   QuickStatsWidget(
-                    confirmedTBCount: _doctor!.confirmedTBCount,
-                    totalPatientsReviewed: _doctor!.totalPatientsReviewed,
-                    totalDiagnosisMade: _doctor!.totalDiagnosisMade,
+                    confirmedTBCount: _doctor.confirmedTBCount,
+                    totalPatientsReviewed: _doctor.totalPatientsReviewed,
+                    totalDiagnosisMade: _doctor.totalDiagnosisMade,
                   ),
                   const SizedBox(height: largePadding),
                   _buildPersonalInfo(),
@@ -203,13 +189,13 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
               children: [
                 const SizedBox(height: 60),
                 ProfileImageWidget(
-                  profileImageUrl: _doctor!.profileImageUrl,
+                  profileImageUrl: _doctor.profileImageUrl,
                   isEditing: _isEditing,
-                  onTap: () {}, // _changeProfileImage when implemented
+                  onTap: () {},
                 ),
                 const SizedBox(height: defaultPadding),
                 Text(
-                  _doctor!.name,
+                  _doctor.name,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: headingSize,
@@ -218,13 +204,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
                 ),
                 const SizedBox(height: smallPadding),
                 Text(
-                  _doctor!.specialization,
+                  _doctor.specialization.isEmpty ? 'Add Specialization' : _doctor.specialization,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
                     fontSize: bodySize,
+                    fontStyle: _doctor.specialization.isEmpty ? FontStyle.italic : FontStyle.normal,
                   ),
                 ),
-                if (_doctor!.hospital != null) ...[
+                if (_doctor.hospital != null && _doctor.hospital!.isNotEmpty) ...[
                   const SizedBox(height: smallPadding),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -236,7 +223,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        _doctor!.hospital!,
+                        _doctor.hospital!,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.8),
                           fontSize: captionSize,
@@ -261,7 +248,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
         children: [
           InfoRowWidget(
             label: 'Name',
-            value: _doctor!.name,
+            value: _doctor.name.isEmpty ? 'Not specified' : _doctor.name,
             icon: Icons.person,
             controller: _nameController,
             isEditing: _isEditing,
@@ -269,7 +256,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
           const SizedBox(height: defaultPadding),
           InfoRowWidget(
             label: 'Phone',
-            value: _doctor!.phone,
+            value: _doctor.phone.isEmpty ? 'Not specified' : _doctor.phone,
             icon: Icons.phone,
             controller: _phoneController,
             isEditing: _isEditing,
@@ -277,14 +264,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
           const SizedBox(height: defaultPadding),
           InfoRowWidget(
             label: 'Email',
-            value: _doctor!.email ?? 'Not provided',
+            value: _doctor.email ?? 'Not provided',
             icon: Icons.email,
-            isEditing: false, // Email shouldn't be editable
+            isEditing: false,
           ),
           const SizedBox(height: defaultPadding),
           InfoRowWidget(
             label: 'Member Since',
-            value: _formatDate(_doctor!.createdAt),
+            value: _formatDate(_doctor.createdAt),
             icon: Icons.calendar_today,
             isEditing: false,
           ),
@@ -301,7 +288,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
         children: [
           InfoRowWidget(
             label: 'Specialization',
-            value: _doctor!.specialization,
+            value: _doctor.specialization.isEmpty ? 'Not specified' : _doctor.specialization,
             icon: Icons.medical_services,
             controller: _specializationController,
             isEditing: _isEditing,
@@ -309,7 +296,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
           const SizedBox(height: defaultPadding),
           InfoRowWidget(
             label: 'Hospital/Clinic',
-            value: _doctor!.hospital ?? 'Not specified',
+            value: _doctor.hospital ?? 'Not specified',
             icon: Icons.local_hospital,
             controller: _hospitalController,
             isEditing: _isEditing,
@@ -317,7 +304,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
           const SizedBox(height: defaultPadding),
           InfoRowWidget(
             label: 'Experience',
-            value: _doctor!.experience ?? 'Not specified',
+            value: _doctor.experience ?? 'Not specified',
             icon: Icons.timeline,
             controller: _experienceController,
             isEditing: _isEditing,
@@ -325,7 +312,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
           const SizedBox(height: defaultPadding),
           InfoRowWidget(
             label: 'Qualifications',
-            value: _doctor!.qualifications ?? 'Not specified',
+            value: _doctor.qualifications ?? 'Not specified',
             icon: Icons.school,
             controller: _qualificationsController,
             isEditing: _isEditing,
@@ -346,7 +333,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
               Expanded(
                 child: StatCardWidget(
                   title: 'Final Verdicts',
-                  value: _doctor!.totalFinalVerdicts.toString(),
+                  value: _doctor.totalFinalVerdicts.toString(),
                   icon: Icons.gavel,
                   color: successColor,
                 ),
@@ -355,7 +342,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
               Expanded(
                 child: StatCardWidget(
                   title: 'Recommendations',
-                  value: _doctor!.totalRecommendationGiven.toString(),
+                  value: _doctor.totalRecommendationGiven.toString(),
                   icon: Icons.recommend,
                   color: warningColor,
                 ),
@@ -368,13 +355,12 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
               Expanded(
                 child: StatCardWidget(
                   title: 'Tests Requested',
-                  value: _doctor!.totalTestsRequested.toString(),
+                  value: _doctor.totalTestsRequested.toString(),
                   icon: Icons.science,
                   color: primaryColor,
                 ),
               ),
               const SizedBox(width: defaultPadding),
-              // Commented out accuracy rate as in original
             ],
           ),
         ],
@@ -404,7 +390,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
           const SizedBox(height: defaultPadding),
           ActivityItemWidget(
             title: 'Profile Updated',
-            subtitle: _formatDate(_doctor!.createdAt),
+            subtitle: _formatDate(_doctor.createdAt),
             icon: Icons.edit,
             color: warningColor,
           ),
@@ -413,10 +399,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
     );
   }
 
-  // Event handlers
   void _handleEditToggle() async {
     if (_isEditing) {
-      // Save changes
       await _saveProfile();
     }
     setState(() {
@@ -426,7 +410,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
 
   Future<void> _saveProfile() async {
     try {
-      final updatedDoctor = _doctor!.copyWith(
+      final updatedDoctor = _doctor.copyWith(
         name: _nameController.text,
         phone: _phoneController.text,
         specialization: _specializationController.text,
@@ -460,52 +444,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
     }
   }
 
-  /*
-  Future<void> _changeProfileImage() async {
-    try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 80,
-      );
-
-      if (pickedFile != null) {
-        // Upload image and update profile
-        final imageUrl = await _profileService.uploadProfileImage(
-          File(pickedFile.path),
-          _doctor!.id,
-        );
-
-        final updatedDoctor = _doctor!.copyWith(profileImageUrl: imageUrl);
-        await _profileService.updateDoctor(updatedDoctor);
-
-        if (mounted) {
-          setState(() {
-            _doctor = updatedDoctor;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile image updated successfully'),
-              backgroundColor: successColor,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating image: $e'),
-            backgroundColor: errorColor,
-          ),
-        );
-      }
-    }
-  }
-  */
-
   void _showSettingsMenu() {
     showModalBottomSheet(
       context: context,
@@ -519,7 +457,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
     );
   }
 
-  // Utility methods
   String _formatDate(DateTime date) {
     final months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -529,12 +466,10 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
   }
 
   void _changePassword() {
-    // Navigate to change password screen
     Navigator.pushNamed(context, '/change-password');
   }
 
   void _exportData() {
-    // Export user data functionality
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Data export feature coming soon'),
@@ -544,17 +479,16 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
   }
 
   void _showPrivacySettings() {
-    // Navigate to privacy settings
     Navigator.pushNamed(context, '/privacy-settings');
   }
 
-  void _signOut() async {
+  Future<void> _signOut() async {
     try {
-      await FirebaseAuth.instance.signOut();
+      await _profileService.signOut();
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
-          '/login',
+          '/webLandingPage',
           (route) => false,
         );
       }

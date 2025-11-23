@@ -1,14 +1,39 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/plan_item_model.dart';
 
 class DietExerciseService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  /// Get current logged-in doctor's ID
+  static String? get _currentDoctorId => _auth.currentUser?.uid;
+
+  /// Verify patient belongs to logged-in doctor
+  static Future<bool> _verifyPatientOwnership(String patientId) async {
+    final doctorId = _currentDoctorId;
+    if (doctorId == null) return false;
+
+    final patientDoc = await _firestore
+        .collection('patients')
+        .doc(patientId)
+        .get();
+    if (!patientDoc.exists) return false;
+
+    return patientDoc.data()?['selectedDoctor'] == doctorId;
+  }
 
   /// -------- DIET PLAN --------
 
   static Future<Map<String, dynamic>> fetchAllDietPlans(String patientId) async {
     if (patientId.isEmpty) {
       throw Exception('Invalid patient ID');
+    }
+
+    final hasAccess = await _verifyPatientOwnership(patientId);
+    if (!hasAccess) {
+      print("⚠️ Access denied: Patient not assigned to this doctor");
+      return {};
     }
 
     final Map<String, dynamic> plans = {};
@@ -49,6 +74,12 @@ class DietExerciseService {
     required String planDocId,
     required PlanItemModel item,
   }) async {
+    final hasAccess = await _verifyPatientOwnership(patientId);
+    if (!hasAccess) {
+      print("⚠️ Access denied: Patient not assigned to this doctor");
+      return;
+    }
+
     final docRef = _firestore
         .collection('patients')
         .doc(patientId)
@@ -65,6 +96,12 @@ class DietExerciseService {
     required String planDocId,
     required PlanItemModel item,
   }) async {
+    final hasAccess = await _verifyPatientOwnership(patientId);
+    if (!hasAccess) {
+      print("⚠️ Access denied: Patient not assigned to this doctor");
+      return;
+    }
+
     final docRef = _firestore
         .collection('patients')
         .doc(patientId)
@@ -80,6 +117,12 @@ class DietExerciseService {
     required String patientId,
     required String planDocId,
   }) async {
+    final hasAccess = await _verifyPatientOwnership(patientId);
+    if (!hasAccess) {
+      print("⚠️ Access denied: Patient not assigned to this doctor");
+      return;
+    }
+
     await _firestore
         .collection('patients')
         .doc(patientId)
@@ -92,6 +135,12 @@ class DietExerciseService {
 
   static Future<Map<String, dynamic>?> fetchAllExercisePlans(String patientId) async {
     if (patientId.isEmpty) {
+      return null;
+    }
+
+    final hasAccess = await _verifyPatientOwnership(patientId);
+    if (!hasAccess) {
+      print("⚠️ Access denied: Patient not assigned to this doctor");
       return null;
     }
 
@@ -128,6 +177,12 @@ class DietExerciseService {
     required String planDocId,
     required PlanItemModel item,
   }) async {
+    final hasAccess = await _verifyPatientOwnership(patientId);
+    if (!hasAccess) {
+      print("⚠️ Access denied: Patient not assigned to this doctor");
+      return;
+    }
+
     await _firestore
         .collection('patients')
         .doc(patientId)
@@ -143,6 +198,12 @@ class DietExerciseService {
     required String planDocId,
     required PlanItemModel item,
   }) async {
+    final hasAccess = await _verifyPatientOwnership(patientId);
+    if (!hasAccess) {
+      print("⚠️ Access denied: Patient not assigned to this doctor");
+      return;
+    }
+
     await _firestore
         .collection('patients')
         .doc(patientId)
@@ -157,6 +218,12 @@ class DietExerciseService {
     required String patientId,
     required String planDocId,
   }) async {
+    final hasAccess = await _verifyPatientOwnership(patientId);
+    if (!hasAccess) {
+      print("⚠️ Access denied: Patient not assigned to this doctor");
+      return;
+    }
+
     await _firestore
         .collection('patients')
         .doc(patientId)
