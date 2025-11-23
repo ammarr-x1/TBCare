@@ -94,207 +94,366 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     }
   }
 
-  Widget _buildLogo(double screenHeight) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 1200),
-      curve: Curves.elasticOut,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: Container(
-            height: screenHeight * 0.18,
-            width: screenHeight * 0.18,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: primaryColor.withOpacity(0.1),
-              border: Border.all(color: primaryColor, width: 1),
-            ),
-            child: ClipOval(
-              child: Padding(
-                padding: const EdgeInsets.all(1.0),
-                child: Image.asset(
-                  'assets/images/logo light.png',
-                  fit: BoxFit.cover,
-                  width: 120,   // increase width
-                  height: 120,  // increase height
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTitle() {
-    return Text(
-      'Create Your Account',
-      style: TextStyle(
-        fontSize: 28,
-        fontWeight: FontWeight.bold,
-        color: primaryColor,
-        letterSpacing: -0.5,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: bgColor,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth > Breakpoints.tablet) {
+            return _buildDesktopLayout(context);
+          } else {
+            return _buildMobileLayout(context);
+          }
+        },
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final padding = screenWidth * 0.06;
-
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: padding),
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    _buildLogo(screenHeight),
-                    const SizedBox(height: 30),
-                    _buildTitle(),
-                    const SizedBox(height: 32),
-
-                    // Full Name
-                    _buildField(_nameController, 'Full Name', Icons.person,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Enter your full name';
-                          }
-                          return null;
-                        }),
-
-                    const SizedBox(height: 16),
-
-                    // Email
-                    _buildField(_emailController, 'Email', Icons.email),
-
-                    const SizedBox(height: 16),
-
-                    // Password
-                    _buildPasswordField(),
-
-                    const SizedBox(height: 16),
-
-                    // Role
-                    Container(
-                      constraints: BoxConstraints(maxWidth: 600),
-                      width: double.infinity,
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedRole,
-                        items: _roles
-                            .map((role) => DropdownMenuItem(
-                          value: role,
-                          child: Text(role,
-                              style: const TextStyle(color: secondaryColor)),
-                        ))
-                            .toList(),
-                        decoration: _inputDecoration('Select role', Icons.person),
-                        dropdownColor: bgColor,
-                        iconEnabledColor: primaryColor,
-                        onChanged: (value) =>
-                            setState(() => _selectedRole = value),
-                        validator: (value) =>
-                        value == null ? 'Please select a role' : null,
-                      ),
+  Widget _buildDesktopLayout(BuildContext context) {
+    return Row(
+      children: [
+        // Left Side - Hero Section
+        Expanded(
+          flex: 5,
+          child: Container(
+            color: primaryColor,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: 0.1,
+                    child: Image.asset(
+                      'assets/images/splash_bg.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox(),
                     ),
-
-                    const SizedBox(height: 30),
-
-                    // Sign Up Button
-                    Container(
-                      constraints: BoxConstraints(maxWidth: 400),
-                      width: double.infinity,
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _handleSignUp,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
+                  ),
+                ),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(extraLargePadding),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Image.asset(
+                          'assets/images/logo light.png',
+                          height: 120,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.local_hospital_rounded,
+                            size: 80,
+                            color: Colors.white,
                           ),
-                          child: _isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text('Sign Up',
-                              style: TextStyle(color: Colors.white)),
                         ),
                       ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Already have account
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text("Already have an account? ",
-                            style: TextStyle(color: secondaryColor)),
-                        GestureDetector(
-                          onTap: () => Navigator.pushNamed(
-                              context, AppConstants.loginRoute),
-                          child: Text('Sign In',
-                              style: TextStyle(
-                                  color: primaryColor,
-                                  fontWeight: FontWeight.bold)),
+                      const SizedBox(height: extraLargePadding),
+                      const Text(
+                        "Join TB-Care AI",
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.2,
                         ),
-                      ],
+                      ),
+                      const SizedBox(height: defaultPadding),
+                      Text(
+                        "Start your journey to better health",
+                        style: TextStyle(
+                          fontSize: titleSize,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Right Side - Sign Up Form
+        Expanded(
+          flex: 4,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(extraLargePadding),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 450),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Create Account",
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: secondaryColor,
+                      ),
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: smallPadding),
+                    Text(
+                      "Please fill in your details to register.",
+                      style: TextStyle(
+                        fontSize: bodySize,
+                        color: secondaryColor.withOpacity(0.6),
+                      ),
+                    ),
+                    const SizedBox(height: extraLargePadding),
+                    _buildSignUpForm(),
                   ],
                 ),
               ),
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(largePadding),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLogo(150),
+              const SizedBox(height: extraLargePadding),
+              const Text(
+                "Create Account",
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: smallPadding),
+              Text(
+                "Sign up to get started",
+                style: TextStyle(
+                  fontSize: bodySize,
+                  color: secondaryColor.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: extraLargePadding),
+              _buildSignUpForm(),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildField(TextEditingController controller, String hint, IconData icon,
-      {String? Function(String?)? validator}) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 600),
-      width: double.infinity,
-      child: TextFormField(
-        controller: controller,
-        style: const TextStyle(color: secondaryColor),
-        decoration: _inputDecoration(hint, icon),
-        validator: validator,
+  Widget _buildSignUpForm() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildField(_nameController, 'Full Name', Icons.person,
+              validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Enter your full name';
+            }
+            return null;
+          }),
+          const SizedBox(height: defaultPadding),
+          _buildField(_emailController, 'Email', Icons.email),
+          const SizedBox(height: defaultPadding),
+          _buildPasswordField(),
+          const SizedBox(height: defaultPadding),
+          _buildRoleDropdown(),
+          const SizedBox(height: largePadding),
+          _buildSignUpButton(),
+          const SizedBox(height: largePadding),
+          _buildSignInText(),
+        ],
       ),
+    );
+  }
+
+  Widget _buildLogo(double size) {
+    return Container(
+      height: size,
+      width: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Image.asset(
+        'assets/images/logo light.png',
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const Icon(
+          Icons.local_hospital_rounded,
+          size: 60,
+          color: primaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildField(
+      TextEditingController controller, String hint, IconData icon,
+      {String? Function(String?)? validator}) {
+    return TextFormField(
+      controller: controller,
+      style: const TextStyle(fontSize: bodySize),
+      decoration: InputDecoration(
+        labelText: hint,
+        hintText: 'Enter your $hint',
+        prefixIcon: Icon(icon, color: primaryColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(defaultRadius),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(defaultRadius),
+          borderSide: BorderSide(color: secondaryColor.withOpacity(0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(defaultRadius),
+          borderSide: const BorderSide(color: primaryColor, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      validator: validator,
     );
   }
 
   Widget _buildPasswordField() {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 600),
-      width: double.infinity,
-      child: TextFormField(
-        controller: _passwordController,
-        obscureText: _obscurePassword,
-        style: const TextStyle(color: secondaryColor),
-        decoration: _inputDecoration('Password', Icons.lock).copyWith(
-          suffixIcon: IconButton(
-            icon: Icon(
-              _obscurePassword ? Icons.visibility_off : Icons.visibility,
-              color: secondaryColor,
-            ),
-            onPressed: () =>
-                setState(() => _obscurePassword = !_obscurePassword),
+    return TextFormField(
+      controller: _passwordController,
+      obscureText: _obscurePassword,
+      style: const TextStyle(fontSize: bodySize),
+      decoration: InputDecoration(
+        labelText: 'Password',
+        hintText: 'Enter your password',
+        prefixIcon: const Icon(Icons.lock_outline_rounded, color: primaryColor),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: secondaryColor,
+          ),
+          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(defaultRadius),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(defaultRadius),
+          borderSide: BorderSide(color: secondaryColor.withOpacity(0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(defaultRadius),
+          borderSide: const BorderSide(color: primaryColor, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildRoleDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedRole,
+      items: _roles
+          .map((role) => DropdownMenuItem(
+                value: role,
+                child: Text(role, style: const TextStyle(fontSize: bodySize)),
+              ))
+          .toList(),
+      decoration: InputDecoration(
+        labelText: 'Select Role',
+        prefixIcon: const Icon(Icons.work_outline, color: primaryColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(defaultRadius),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(defaultRadius),
+          borderSide: BorderSide(color: secondaryColor.withOpacity(0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(defaultRadius),
+          borderSide: const BorderSide(color: primaryColor, width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      onChanged: (value) => setState(() => _selectedRole = value),
+      validator: (value) => value == null ? 'Please select a role' : null,
+    );
+  }
+
+  Widget _buildSignUpButton() {
+    return SizedBox(
+      height: 56,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _handleSignUp,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryColor,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(defaultRadius),
           ),
         ),
+        child: _isLoading
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : const Text(
+                'Sign Up',
+                style: TextStyle(
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
       ),
+    );
+  }
+
+  Widget _buildSignInText() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          "Already have an account? ",
+          style: TextStyle(
+            color: secondaryColor.withOpacity(0.7),
+            fontSize: bodySize,
+          ),
+        ),
+        GestureDetector(
+          onTap: () => Navigator.pushNamed(context, AppConstants.loginRoute),
+          child: const Text(
+            'Sign In',
+            style: TextStyle(
+              color: primaryColor,
+              fontWeight: FontWeight.bold,
+              fontSize: bodySize,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

@@ -15,64 +15,9 @@ class WebLandingScreen extends StatefulWidget {
   State<WebLandingScreen> createState() => _WebLandingScreenState();
 }
 
-class _WebLandingScreenState extends State<WebLandingScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late AnimationController _pulseController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _pulseAnimation;
-
+class _WebLandingScreenState extends State<WebLandingScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
   int _hoveredIndex = -1;
-
-  @override
-  void initState() {
-    super.initState();
-    _setupAnimations();
-  }
-
-  void _setupAnimations() {
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
-      ),
-    );
-
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _pulseController.dispose();
-    super.dispose();
-  }
 
   Future<void> _handleSignOut() async {
     try {
@@ -88,7 +33,7 @@ class _WebLandingScreenState extends State<WebLandingScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error signing out: $e'),
-          backgroundColor: errorColor,
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -97,87 +42,45 @@ class _WebLandingScreenState extends State<WebLandingScreen>
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final isTablet = screenSize.width > Breakpoints.tablet;
     final isDesktop = screenSize.width > Breakpoints.desktop;
+    final isTablet = screenSize.width > Breakpoints.tablet && !isDesktop;
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: CustomScrollView(
-        slivers: [
-          _buildAppBar(),
-          SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Padding(
-                  padding: EdgeInsets.all(
-                    isDesktop ? extraLargePadding : defaultPadding,
-                  ),
-                  child: Column(
-                    children: [
-                      _buildHeader(isDesktop),
-                      SizedBox(height: isDesktop ? 64 : 32),
-                      _buildDashboardGrid(screenSize, isTablet, isDesktop),
-                      SizedBox(height: isDesktop ? 64 : 32),
-                      _buildFooter(),
-                    ],
-                  ),
-                ),
+      appBar: _buildAppBar(),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildHeroSection(isDesktop),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isDesktop ? screenSize.width * 0.1 : defaultPadding,
+                vertical: largePadding,
               ),
+              child: _buildDashboardGrid(isDesktop, isTablet),
             ),
-          ),
-        ],
+            _buildFooter(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildAppBar() {
-    return SliverAppBar(
-      expandedHeight: 80,
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
       backgroundColor: Colors.white,
-      pinned: true,
-      automaticallyImplyLeading: false,
       elevation: 0,
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: primaryColor.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-      ),
+      titleSpacing: isDesktop(context) ? 32 : 16,
       title: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [primaryColor.withOpacity(0.2), primaryColor.withOpacity(0.1)],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: primaryColor.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Icon(Icons.local_hospital, color: primaryColor, size: 28),
-          ),
-          const SizedBox(width: 16),
+          Icon(Icons.local_hospital_rounded, color: primaryColor, size: 32),
+          const SizedBox(width: 12),
           Text(
             'TB-Care AI',
             style: GoogleFonts.poppins(
-              fontWeight: FontWeight.bold,
-              fontSize: 28,
               color: primaryColor,
-              letterSpacing: -0.5,
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
             ),
           ),
         ],
@@ -185,61 +88,43 @@ class _WebLandingScreenState extends State<WebLandingScreen>
       actions: [
         if (currentUser != null)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.only(right: 24.0),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [primaryColor.withOpacity(0.8), accentColor],
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.white,
-                    child: Text(
-                      currentUser!.email?[0].toUpperCase() ?? 'U',
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                CircleAvatar(
+                  backgroundColor: primaryColor.withOpacity(0.1),
+                  child: Text(
+                    currentUser!.email?[0].toUpperCase() ?? 'U',
+                    style: const TextStyle(
+                        color: primaryColor, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(width: 12),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome!',
-                      style: TextStyle(
-                        color: secondaryColor.withOpacity(0.6),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                if (MediaQuery.of(context).size.width > 600)
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome',
+                        style: TextStyle(
+                            color: secondaryColor.withOpacity(0.6),
+                            fontSize: 12),
                       ),
-                    ),
-                    Text(
-                      currentUser!.email ?? "User",
-                      style: TextStyle(
-                        color: secondaryColor,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                      Text(
+                        currentUser!.email ?? 'User',
+                        style: const TextStyle(
+                            color: secondaryColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 const SizedBox(width: 16),
                 IconButton(
+                  icon: const Icon(Icons.logout_rounded, color: secondaryColor),
                   onPressed: _handleSignOut,
-                  icon: Icon(Icons.logout_rounded, color: errorColor),
                   tooltip: 'Sign Out',
-                  style: IconButton.styleFrom(
-                    backgroundColor: errorColor.withOpacity(0.1),
-                  ),
                 ),
               ],
             ),
@@ -248,122 +133,112 @@ class _WebLandingScreenState extends State<WebLandingScreen>
     );
   }
 
-  Widget _buildHeader(bool isDesktop) {
-    return Column(
-      children: [
-        ScaleTransition(
-          scale: _pulseAnimation,
-          child: Container(
+  bool isDesktop(BuildContext context) =>
+      MediaQuery.of(context).size.width > Breakpoints.desktop;
+
+  Widget _buildHeroSection(bool isDesktop) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 20),
+      decoration: BoxDecoration(
+        color: primaryColor,
+        image: DecorationImage(
+          image: const AssetImage('assets/images/splash_bg.png'),
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(
+              primaryColor.withOpacity(0.9), BlendMode.srcOver),
+          onError: (_, __) {},
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [primaryColor.withOpacity(0.2), accentColor.withOpacity(0.1)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: primaryColor.withOpacity(0.3),
-                  blurRadius: 30,
-                  spreadRadius: 5,
-                ),
-              ],
+              border: Border.all(color: Colors.white.withOpacity(0.2)),
             ),
-            child: Icon(
-              Icons.dashboard_rounded,
-              size: isDesktop ? 80 : 60,
-              color: primaryColor,
-            ),
+            child: const Icon(Icons.dashboard_rounded,
+                size: 64, color: Colors.white),
           ),
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'Dashboard Selection',
-          style: GoogleFonts.poppins(
-            fontSize: isDesktop ? 42 : 32,
-            fontWeight: FontWeight.bold,
-            color: secondaryColor,
-            letterSpacing: -1,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: primaryColor.withOpacity(0.2)),
-          ),
-          child: Text(
-            'Choose Your Role to access appropriate Dashboard',
-            style: TextStyle(
-              fontSize: isDesktop ? 18 : 16,
-              color: primaryColor.withOpacity(0.8),
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: 32),
+          Text(
+            'Welcome to Your Dashboard',
+            style: GoogleFonts.poppins(
+              fontSize: isDesktop ? 48 : 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              height: 1.2,
             ),
             textAlign: TextAlign.center,
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDashboardGrid(Size screenSize, bool isTablet, bool isDesktop) {
-    final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
-    final childAspectRatio = isDesktop ? 1.2 : (isTablet ? 1.1 : 1.3);
-
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: isDesktop ? 1200 : double.infinity),
-      child: GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 24,
-        mainAxisSpacing: 24,
-        childAspectRatio: childAspectRatio,
-        children: [
-          _buildDashboardCard(
-            index: 0,
-            title: 'Doctor Dashboard',
-            subtitle: 'Patient Management & Diagnostics',
-            icon: Icons.medical_services_rounded,
-            color: accentColor,
-            route: AppConstants.onboardingRoute,
-            description: 'Review AI Screenings, AI Predictions, and provide medical assessments',
-            isImplemented: true,
-          ),
-          _buildDashboardCard(
-            index: 1,
-            title: 'CHW Dashboard',
-            subtitle: 'Community Health Worker Tools',
-            icon: Icons.health_and_safety_rounded,
-            color: successColor,
-            route: AppConstants.onboardingRoute,
-            description: 'Community screening tools and patient follow-up management',
-            isImplemented: true,
-          ),
-          _buildDashboardCard(
-            index: 2,
-            title: 'Admin Dashboard',
-            subtitle: 'System Management & Analytics',
-            icon: Icons.admin_panel_settings_rounded,
-            color: Color(0xFF9B59B6),
-            route: AppConstants.adminRoute,
-            description: 'User management, system analytics, and platform monitoring',
-            isImplemented: false,
+          const SizedBox(height: 16),
+          Container(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Text(
+              'Select your role below to access the appropriate tools, patient records, and diagnostic features.',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.white.withOpacity(0.9),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDashboardCard({
+  Widget _buildDashboardGrid(bool isDesktop, bool isTablet) {
+    int crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+    double aspectRatio = isDesktop ? 1.1 : (isTablet ? 1.0 : 1.4);
+
+    return LayoutBuilder(builder: (context, constraints) {
+      return GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 24,
+        mainAxisSpacing: 24,
+        childAspectRatio: aspectRatio,
+        children: [
+          _buildCard(
+            index: 0,
+            title: 'Doctor Dashboard',
+            description: 'Patient Management & AI Diagnostics',
+            icon: Icons.medical_services_outlined,
+            route: AppConstants.onboardingRoute,
+            isImplemented: true,
+          ),
+          _buildCard(
+            index: 1,
+            title: 'CHW Dashboard',
+            description: 'Community Health Worker Tools',
+            icon: Icons.health_and_safety_outlined,
+            route: AppConstants.onboardingRoute,
+            isImplemented: true,
+          ),
+          _buildCard(
+            index: 2,
+            title: 'Admin Dashboard',
+            description: 'System Management & Analytics',
+            icon: Icons.admin_panel_settings_outlined,
+            route: AppConstants.adminRoute,
+            isImplemented: false,
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildCard({
     required int index,
     required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required String route,
     required String description,
+    required IconData icon,
+    required String route,
     required bool isImplemented,
   }) {
     final isHovered = _hoveredIndex == index;
@@ -372,20 +247,26 @@ class _WebLandingScreenState extends State<WebLandingScreen>
       onEnter: (_) => setState(() => _hoveredIndex = index),
       onExit: (_) => setState(() => _hoveredIndex = -1),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        transform: Matrix4.identity()..scale(isHovered ? 1.05 : 1.0),
-        child: Card(
+        transform: Matrix4.identity()..translate(0, isHovered ? -8 : 0),
+        decoration: BoxDecoration(
           color: Colors.white,
-          elevation: isHovered ? 16 : 4,
-          shadowColor: color.withOpacity(isHovered ? 0.4 : 0.2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(
-              color: isHovered ? color.withOpacity(0.5) : color.withOpacity(0.2),
-              width: isHovered ? 2 : 1,
+          borderRadius: BorderRadius.circular(largeRadius),
+          boxShadow: [
+            BoxShadow(
+              color: primaryColor.withOpacity(isHovered ? 0.15 : 0.05),
+              blurRadius: isHovered ? 24 : 12,
+              offset: const Offset(0, 8),
             ),
+          ],
+          border: Border.all(
+            color: isHovered ? primaryColor : Colors.transparent,
+            width: 2,
           ),
+        ),
+        child: Material(
+          color: Colors.transparent,
           child: InkWell(
             onTap: () {
               if (isImplemented) {
@@ -393,162 +274,86 @@ class _WebLandingScreenState extends State<WebLandingScreen>
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('$title is coming Soon!'),
-                    backgroundColor: warningColor,
+                    content: const Text('Coming Soon!'),
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(defaultRadius),
-                    ),
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 );
               }
             },
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white,
-                    color.withOpacity(0.05),
-                  ],
-                ),
-              ),
+            borderRadius: BorderRadius.circular(largeRadius),
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              color.withOpacity(isHovered ? 0.3 : 0.2),
-                              color.withOpacity(isHovered ? 0.2 : 0.1),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: isHovered
-                              ? [
-                                  BoxShadow(
-                                    color: color.withOpacity(0.4),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ]
-                              : [],
-                        ),
-                        child: Icon(icon, color: color, size: 36),
-                      ),
-                      const Spacer(),
-                      if (!isImplemented)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: warningColor.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: warningColor.withOpacity(0.3)),
-                          ),
-                          child: Text(
-                            'Coming Soon',
-                            style: TextStyle(
-                              color: warningColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      if (isImplemented)
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: successColor.withOpacity(0.15),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: successColor.withOpacity(0.3)),
-                          ),
-                          child: Icon(Icons.check_rounded, color: successColor, size: 18),
-                        ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: isHovered
+                          ? primaryColor
+                          : primaryColor.withOpacity(0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 48,
+                      color: isHovered ? Colors.white : primaryColor,
+                    ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   Text(
                     title,
                     style: GoogleFonts.poppins(
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: secondaryColor,
-                      letterSpacing: -0.5,
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
-                  Expanded(
-                    child: Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: secondaryColor.withOpacity(0.7),
-                        height: 1.5,
-                      ),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: secondaryColor.withOpacity(0.6),
+                      height: 1.5,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          child: ElevatedButton(
-                            onPressed: isImplemented
-                                ? () => Navigator.pushNamed(context, route)
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isImplemented ? color : secondaryColor.withOpacity(0.3),
-                              foregroundColor: Colors.white,
-                              elevation: isHovered && isImplemented ? 8 : 0,
-                              shadowColor: color.withOpacity(0.5),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  isImplemented ? 'Open Dashboard' : 'Coming Soon',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                if (isImplemented) ...[
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    Icons.arrow_forward_rounded,
-                                    size: 18,
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
+                  const SizedBox(height: 24),
+                  if (!isImplemented)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Text(
+                        'Coming Soon',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: secondaryColor.withOpacity(0.5),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  if (isImplemented)
+                    AnimatedOpacity(
+                      opacity: isHovered ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 200),
+                      child: const Text(
+                        'Click to Access',
+                        style: TextStyle(
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -559,57 +364,24 @@ class _WebLandingScreenState extends State<WebLandingScreen>
   }
 
   Widget _buildFooter() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 32),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 32.0, top: 16.0),
       child: Column(
         children: [
-          Container(
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  primaryColor.withOpacity(0.2),
-                  Colors.transparent,
-                ],
-              ),
+          Text(
+            '© 2024 TB-Care AI. All rights reserved.',
+            style: TextStyle(
+              color: secondaryColor.withOpacity(0.5),
+              fontSize: 14,
             ),
           ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.info_outline,
-                  color: primaryColor,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '${AppConstants.appName} ${AppConstants.version} | Healthcare Management System',
-                style: TextStyle(
-                  color: secondaryColor.withOpacity(0.7),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
-            'AI powered tuberculosis screening and patient care platform',
+            'Advanced Screening & Patient Management System',
             style: TextStyle(
-              color: secondaryColor.withOpacity(0.6),
+              color: secondaryColor.withOpacity(0.4),
               fontSize: 12,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

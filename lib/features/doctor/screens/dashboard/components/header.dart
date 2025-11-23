@@ -112,34 +112,63 @@ class _SearchFieldState extends State<SearchField> {
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         left: offset.dx,
-        top: offset.dy + renderBox.size.height + 5,
+        top: offset.dy + renderBox.size.height + 8,
         width: renderBox.size.width,
         child: Material(
-          elevation: 4,
-          borderRadius: BorderRadius.circular(10),
+          elevation: 8,
+          shadowColor: Colors.black.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
           color: Colors.white,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: suggestions.length,
-            itemBuilder: (context, index) {
-              final patient = suggestions[index];
-              return ListTile(
-                title: Text(
-                  patient.name,
-                  style: const TextStyle(color: Colors.black87),
-                ),
-                onTap: () {
-                  _removeOverlay();
-                  _controller.clear();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PatientDetailScreen(patient: patient),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: ListView.separated(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              itemCount: suggestions.length,
+              separatorBuilder: (context, index) => Divider(
+                height: 1,
+                color: Colors.grey.withOpacity(0.1),
+              ),
+              itemBuilder: (context, index) {
+                final patient = suggestions[index];
+                return ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: CircleAvatar(
+                    backgroundColor: primaryColor.withOpacity(0.1),
+                    child: Text(
+                      patient.name[0].toUpperCase(),
+                      style: const TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  );
-                },
-              );
-            },
+                  ),
+                  title: Text(
+                    patient.name,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    "ID: ${patient.uid.substring(0, 8)}...",
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                  ),
+                  onTap: () {
+                    _removeOverlay();
+                    _controller.clear();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PatientDetailScreen(patient: patient),
+                      ),
+                    );
+                  },
+                  hoverColor: primaryColor.withOpacity(0.05),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -159,32 +188,59 @@ class _SearchFieldState extends State<SearchField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: _controller,
-      focusNode: _focusNode,
-      onChanged: _onSearchChanged,
-      style: const TextStyle(color: Colors.black87),
-      decoration: InputDecoration(
-        hintText: "Search",
-        hintStyle: const TextStyle(color: Colors.black54),
-        fillColor: Colors.white,
-        filled: true,
-        border: const OutlineInputBorder(
-          borderSide: BorderSide.none,
-          borderRadius: BorderRadius.all(Radius.circular(10)),
-        ),
-        suffixIcon: InkWell(
-          onTap: () => _onSearchChanged(_controller.text),
-          child: Container(
-            padding: const EdgeInsets.all(defaultPadding * 0.75),
-            margin: const EdgeInsets.symmetric(horizontal: defaultPadding / 2),
-            decoration: const BoxDecoration(
-              color: primaryColor,
-              borderRadius: BorderRadius.all(Radius.circular(10)),
-            ),
-            child: SvgPicture.asset(
-              "assets/icons/search-svgrepo-com.svg",
-              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        onChanged: _onSearchChanged,
+        style: const TextStyle(color: Colors.black87),
+        decoration: InputDecoration(
+          hintText: "Search patients...",
+          hintStyle: TextStyle(color: Colors.grey.shade400),
+          fillColor: Colors.transparent,
+          filled: true,
+          border: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
+          suffixIcon: InkWell(
+            onTap: () => _onSearchChanged(_controller.text),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: primaryColor,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: SvgPicture.asset(
+                "assets/icons/search-svgrepo-com.svg",
+                colorFilter:
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                width: 16,
+                height: 16,
+              ),
             ),
           ),
         ),

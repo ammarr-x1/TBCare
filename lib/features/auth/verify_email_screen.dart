@@ -121,79 +121,109 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final padding = screenWidth * 0.08;
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: padding),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.mark_email_read_outlined,
-                  size: screenHeight * 0.12, color: primaryColor),
-              SizedBox(height: screenHeight * 0.03),
-              const Text(
-                "Verify Your Email",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: secondaryColor,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(defaultPadding),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 450),
+            padding: const EdgeInsets.all(extraLargePadding),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(largeRadius),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                "A verification link has been sent to your email.\nPlease verify before signing in.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: secondaryColor.withOpacity(0.8),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.mark_email_read_outlined,
+                  size: 80,
+                  color: primaryColor,
                 ),
-              ),
-              SizedBox(height: screenHeight * 0.05),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.check, color: Colors.white),
-                  onPressed: _isVerifying ? null : _checkVerification,
-                  label: _isVerifying
-                      ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                      : const Text(
-                    "I have verified",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: _isCooldown ? null : _resendVerification,
-                child: Text(
-                  _isCooldown ? "Wait $_cooldownSeconds s..." : "Resend Email",
+                const SizedBox(height: largePadding),
+                const Text(
+                  "Verify Your Email",
                   style: TextStyle(
-                    color: primaryColor,
+                    fontSize: headingSize,
                     fontWeight: FontWeight.bold,
+                    color: secondaryColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: defaultPadding),
+                Text(
+                  "A verification link has been sent to your email.\nPlease verify before signing in.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: bodySize,
+                    color: secondaryColor.withOpacity(0.7),
+                    height: 1.5,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: extraLargePadding),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.check, color: Colors.white),
+                    onPressed: _isVerifying ? null : _checkVerification,
+                    label: _isVerifying
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "I have verified",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: bodySize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(defaultRadius),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: defaultPadding),
+                TextButton(
+                  onPressed: _isCooldown ? null : _resendVerification,
+                  style: TextButton.styleFrom(
+                    foregroundColor: primaryColor,
+                  ),
+                  child: Text(
+                    _isCooldown
+                        ? "Wait $_cooldownSeconds s..."
+                        : "Resend Email",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: bodySize,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
