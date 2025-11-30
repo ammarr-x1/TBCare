@@ -132,4 +132,43 @@ class ScreeningService {
       return false;
     }
   }
+
+  /// Fetch latest diagnosis status for a specific screening (with ownership check)
+  /// Returns a map with: status, notes, requestedTest
+  static Future<Map<String, dynamic>?> fetchLatestDiagnosisStatus({
+    required String patientId,
+    required String screeningId,
+  }) async {
+    try {
+      // HIPAA: Verify patient belongs to this doctor
+      final hasAccess = await _verifyPatientOwnership(patientId);
+      if (!hasAccess) {
+        print("⚠️ Access denied: Patient not assigned to this doctor");
+        return null;
+      }
+
+      final diagnosisSnapshot = await _patientsRef
+          .doc(patientId)
+          .collection('screenings')
+          .doc(screeningId)
+          .collection('diagnosis')
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (diagnosisSnapshot.docs.isEmpty) {
+        return null;
+      }
+
+      final data = diagnosisSnapshot.docs.first.data();
+      return {
+        'status': (data['status'] ?? '') as String,
+        'notes': (data['notes'] ?? '') as String?,
+        'requestedTest': (data['requestedTest'] ?? '') as String?,
+      };
+    } catch (e) {
+      print("❌ Error fetching diagnosis status for $patientId/$screeningId: $e");
+      return null;
+    }
+  }
 }

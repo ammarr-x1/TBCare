@@ -1,7 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:tbcare_main/core/app_constants.dart';
 import '../../../models/ai_case_model.dart';
+import '../../../services/screening_service.dart';
 import 'case_detail_dialog.dart';
 import 'case_action_modal.dart';
 import '../../assessments/test_review_screen.dart';
@@ -26,6 +26,8 @@ class _AiCaseCardState extends State<AiCaseCard> {
   String? doctorNote;
   String? testRequested;
   bool showReviewButton = false;
+  bool isLoading = true;
+  String? errorMessage;
 
   @override
   void initState() {
@@ -37,21 +39,21 @@ class _AiCaseCardState extends State<AiCaseCard> {
 
   Future<void> _fetchLatestDiagnosisStatus() async {
     try {
-      final diagnosisSnapshot = await FirebaseFirestore.instance
-          .collection('patients')
-          .doc(widget.caseData.patientId)
-          .collection('screenings')
-          .doc(widget.caseData.screeningId)
-          .collection('diagnosis')
-          .orderBy('createdAt', descending: true)
-          .limit(1)
-          .get();
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
 
-      if (diagnosisSnapshot.docs.isNotEmpty) {
-        final data = diagnosisSnapshot.docs.first.data();
-        final status = (data['status'] ?? '') as String;
-        final notes = (data['notes'] ?? '') as String?;
-        final requestedTest = (data['requestedTest'] ?? '') as String?;
+      final diagnosisData = await ScreeningService.fetchLatestDiagnosisStatus(
+        patientId: widget.caseData.patientId,
+        screeningId: widget.caseData.screeningId,
+      );
+
+      if (diagnosisData != null) {
+        final status = diagnosisData['status'] as String;
+        final notes = diagnosisData['notes'] as String?;
+        final requestedTest = diagnosisData['requestedTest'] as String?;
+
         setState(() {
           caseStatus = status.isNotEmpty ? status : caseStatus;
           doctorNote = notes ?? doctorNote;
@@ -59,9 +61,18 @@ class _AiCaseCardState extends State<AiCaseCard> {
               ? requestedTest
               : testRequested;
           showReviewButton = status == _DiagStatus.lab;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
         });
       }
     } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to load diagnosis status';
+        isLoading = false;
+      });
       // ignore: avoid_print
       print("Error checking diagnosis status: $e");
     }
@@ -84,6 +95,10 @@ class _AiCaseCardState extends State<AiCaseCard> {
             _buildMedia(),
             const SizedBox(height: 16),
             _buildDetails(),
+            if (errorMessage != null) ...[
+              const SizedBox(height: 8),
+              _buildErrorBanner(),
+            ],
             const SizedBox(height: 16),
             _buildActions(context),
           ],
@@ -293,6 +308,36 @@ class _AiCaseCardState extends State<AiCaseCard> {
               ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: errorColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: errorColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            color: errorColor,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              errorMessage!,
+              style: TextStyle(
+                color: errorColor,
+                fontSize: captionSize,
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -44,27 +44,32 @@ class _ScreeningDiagnosisScreenState extends State<ScreeningDiagnosisScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
+        centerTitle: true,
         title: Text(
           "Screening & Diagnosis",
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh, color: Colors.white), 
+            icon: const Icon(Icons.refresh, color: Colors.white), 
             onPressed: fetchScreeningCases,
           ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(defaultPadding),
+        padding: const EdgeInsets.symmetric(horizontal: largePadding, vertical: defaultPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               "Recent AI-Screened Cases",
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: secondaryColor,
                 fontWeight: FontWeight.bold,
               ),
@@ -72,7 +77,7 @@ class _ScreeningDiagnosisScreenState extends State<ScreeningDiagnosisScreen> {
             const SizedBox(height: defaultPadding),
             Expanded(
               child: isLoading
-                  ? Center(child: CircularProgressIndicator(color: primaryColor))
+                  ? const Center(child: CircularProgressIndicator(color: primaryColor))
                   : caseList.isEmpty
                   ? Center(
                       child: Column(
@@ -95,6 +100,7 @@ class _ScreeningDiagnosisScreenState extends State<ScreeningDiagnosisScreen> {
                       ),
                     )
                   : ListView.separated(
+                      padding: const EdgeInsets.only(bottom: defaultPadding),
                       itemCount: caseList.length,
                       separatorBuilder: (context, index) =>
                           const SizedBox(height: defaultPadding),
