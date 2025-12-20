@@ -24,8 +24,8 @@ class RecentCase {
     return RecentCase(
       patientId: patientId,
       patientName: patientData['name'] ?? '',
-      diagnosis: screeningData['finalDiagnosis'] ?? 'Pending Review',
-      date: (screeningData['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      diagnosis: screeningData['doctorDiagnosis'] ?? 'Pending Review',
+      date: (screeningData['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       icon: "assets/icons/user.svg",
     );
   }

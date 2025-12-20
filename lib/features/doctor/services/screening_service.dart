@@ -39,7 +39,7 @@ class ScreeningService {
       final snapshot = await _patientsRef
           .doc(patientId)
           .collection('screenings')
-          .orderBy('date', descending: true)
+          .orderBy('timestamp', descending: true)
           .get();
 
       return snapshot.docs
@@ -75,7 +75,7 @@ class ScreeningService {
 
         final screeningsSnapshot = await patientDoc.reference
             .collection('screenings')
-            .orderBy('date', descending: true)
+            .orderBy('timestamp', descending: true)
             .limit(limitPerPatient)
             .get();
 
@@ -123,7 +123,7 @@ class ScreeningService {
       await docRef.set({
         ...data,
         'screeningId': screeningId,
-        'date': Timestamp.now(),
+        'timestamp': Timestamp.now(),
       });
 
       return true;

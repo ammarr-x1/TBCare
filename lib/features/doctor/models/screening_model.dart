@@ -28,22 +28,28 @@ class ScreeningModel {
   factory ScreeningModel.fromMap(Map<String, dynamic> data, String id) {
     return ScreeningModel(
       screeningId: data['screeningId'] ?? id,
-      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      date: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       submittedBy: data['submittedBy']?.toString() ?? '',
-      symptoms: Map<String, dynamic>.from(data['symptoms'] ?? {}),
-      aiPrediction: Map<String, dynamic>.from(data['aiPrediction'] ?? {}),
-      finalDiagnosis: data['finalDiagnosis'],
+      symptoms: (data['symptoms'] is List)
+          ? {for (var v in data['symptoms']) v.toString(): true}
+          : {},
+      aiPrediction: data['aiPrediction'] is String
+          ? {'prediction': data['aiPrediction']}
+          : {},
+      finalDiagnosis: data['doctorDiagnosis'],
       diagnosedBy: data['diagnosedBy'],
       status: data['status'] ?? 'Pending Review',
-      mediaType: data['mediaType'] ?? 'cough',
-      mediaUrl: data['mediaUrl'] ?? '',
+      mediaType: data['xrayImage'] != null
+          ? 'xray'
+          : (data['coughAudioPath'] != null ? 'cough' : 'unknown'),
+      mediaUrl: data['xrayImage'] ?? data['coughAudioPath'] ?? '',
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'screeningId': screeningId,
-      'date': Timestamp.fromDate(date),
+      'timestamp': Timestamp.fromDate(date),
       'submittedBy': submittedBy,
       'symptoms': symptoms,
       'aiPrediction': aiPrediction,

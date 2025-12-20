@@ -30,7 +30,7 @@ class RecentCasesService {
       for (var patientDoc in patientsSnap.docs) {
         final screeningsSnap = await patientDoc.reference
             .collection('screenings')
-            .orderBy('date', descending: true)
+            .orderBy('timestamp', descending: true)
             .limit(1)
             .get();
 

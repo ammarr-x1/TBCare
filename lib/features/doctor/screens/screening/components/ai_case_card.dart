@@ -272,7 +272,7 @@ class _AiCaseCardState extends State<AiCaseCard> {
           ),
           const SizedBox(height: 8),
           Text(
-            widget.caseData.aiResult ?? 'Analysis pending...',
+            "${widget.caseData.aiResult ?? 'Analysis pending'} ${widget.caseData.aiConfidence != null ? '(${widget.caseData.aiConfidence}%)' : ''}",
             style: TextStyle(
               color: secondaryColor.withOpacity(0.8),
               fontSize: captionSize,

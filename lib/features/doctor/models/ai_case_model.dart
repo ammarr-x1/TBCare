@@ -14,6 +14,7 @@ class AiCaseModel {
   final String? doctorNotes;
   final Map<String, dynamic>? symptoms;
   final Map<String, dynamic>? aiPrediction;
+  final double? aiConfidence; // New field from screenshot
 
   AiCaseModel({
     required this.patientId,
@@ -29,6 +30,7 @@ class AiCaseModel {
     this.symptoms,
     this.aiResult,
     this.aiPrediction,
+    this.aiConfidence,
   });
 
   factory AiCaseModel.fromFirestore(
@@ -38,31 +40,39 @@ class AiCaseModel {
   ) {
     final data = doc.data() ?? {};
 
-    final prediction = Map<String, dynamic>.from(data['aiPrediction'] ?? {});
-    final topPrediction = prediction.entries.isNotEmpty
-        ? prediction.entries.reduce(
-            (a, b) =>
-                (a.value as num).toDouble() > (b.value as num).toDouble()
-                    ? a
-                    : b,
-          ).key
-        : null;
+    // Parse symptoms (List in new schema)
+    final symptomsList = data['symptoms'] is List ? List<String>.from(data['symptoms']) : <String>[];
+    final symptomsMap = {for (var s in symptomsList) s: true};
+
+    // Parse AI prediction (String in Firestore)
+    final aiPredString = data['aiPrediction'] as String? ?? 'Pending';
+    final aiConfidence = (data['aiConfidence'] as num?)?.toDouble();
+
+    final aiPredictionMap = {
+      'prediction': aiPredString,
+      'confidence': aiConfidence
+    };
 
     return AiCaseModel(
       patientId: patientId,
       screeningId: data['screeningId'] ?? doc.id,
       patientName: patientName,
-      mediaType: data['mediaType'] ?? 'cough',
-      mediaUrl: data['mediaUrl'] ?? '',
-      date: (data['date'] as Timestamp?)?.toDate() ??
+      mediaType: data['xrayImage'] != null
+          ? 'xray'
+          : (data['coughAudioPath'] != null ? 'cough' : 'unknown'),
+      mediaUrl: data['xrayImage'] ?? data['coughAudioPath'] ?? '',
+      date: (data['timestamp'] as Timestamp?)?.toDate() ??
           DateTime.now(), // 🔑 correct field for screenings
-      aiResult: topPrediction,
-      aiPrediction: prediction,
+      aiResult: aiPredString,
+      aiPrediction: aiPredictionMap,
+      aiConfidence: aiConfidence,
       status: data['status'] ?? 'Pending Review',
-      finalDiagnosis: data['finalDiagnosis'],
+      finalDiagnosis: data['doctorDiagnosis'],
       diagnosedBy: data['diagnosedBy'],
-      doctorNotes: data['doctorNotes'],
-      symptoms: Map<String, dynamic>.from(data['symptoms'] ?? {}),
+      doctorNotes: data['doctorDiagnosis'] != null
+          ? "Diagnosis: ${data['doctorDiagnosis']}"
+          : null,
+      symptoms: symptomsMap,
     );
   }
 
@@ -73,7 +83,7 @@ class AiCaseModel {
       'patientName': patientName,
       'mediaType': mediaType,
       'mediaUrl': mediaUrl,
-      'date': Timestamp.fromDate(date), // 🔑 correct persistence field
+      'timestamp': Timestamp.fromDate(date), // 🔑 correct persistence field
       'aiResult': aiResult,
       'aiPrediction': aiPrediction,
       'status': status,
