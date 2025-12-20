@@ -96,8 +96,8 @@ class _ScreeningDiagnosisScreenState extends State<ScreeningDiagnosisScreen> {
         children: [
           // Search Bar Section - Keep it clean but on primary/bg boundary
           Container(
-            color: primaryColor,
-            padding: const EdgeInsets.fromLTRB(largePadding, 0, largePadding, largePadding),
+            color: bgColor,
+            padding: const EdgeInsets.fromLTRB(largePadding, largePadding, largePadding, smallPadding),
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,

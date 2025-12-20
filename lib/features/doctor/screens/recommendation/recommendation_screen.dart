@@ -14,23 +14,22 @@ class RecommendationScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           "Recommendations",
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: secondaryColor,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
         ),
-        backgroundColor: bgColor,
+        backgroundColor: primaryColor,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.white.withOpacity(0.2),
               shape: BoxShape.circle,
-              border: Border.all(color: secondaryColor.withOpacity(0.1)),
             ),
-            child: const Icon(Icons.arrow_back_ios_new, size: 18, color: secondaryColor),
+            child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -39,11 +38,10 @@ class RecommendationScreen extends StatelessWidget {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.white.withOpacity(0.2), // Semi-transparent white
                 shape: BoxShape.circle,
-                border: Border.all(color: secondaryColor.withOpacity(0.1)),
               ),
-              child: const Icon(Icons.refresh, size: 20, color: secondaryColor),
+              child: const Icon(Icons.refresh, size: 20, color: Colors.white),
             ),
             onPressed: () {
               // ignore: invalid_use_of_protected_member
@@ -51,7 +49,7 @@ class RecommendationScreen extends StatelessWidget {
             },
             tooltip: 'Refresh',
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 16),
         ],
       ),
       body: Column(
