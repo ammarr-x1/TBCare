@@ -20,10 +20,20 @@ class SideMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDrawerMode = !Responsive.isDesktop(context);
 
+    // Modern polished gradient or solid primary color
     return Drawer(
       backgroundColor: Colors.transparent,
       child: Container(
-        color: primaryColor,
+        decoration: BoxDecoration(
+          color: primaryColor,
+          boxShadow: [
+             BoxShadow(
+               color: Colors.black.withOpacity(0.2),
+               blurRadius: 15,
+               offset: const Offset(4, 0),
+             ),
+          ],
+        ),
         padding: const EdgeInsets.symmetric(
           horizontal: defaultPadding,
           vertical: defaultPadding,
@@ -32,8 +42,9 @@ class SideMenu extends StatelessWidget {
           children: [
             DrawerHeader(
               margin: EdgeInsets.zero,
-              padding: const EdgeInsets.all(defaultPadding),
+              padding: const EdgeInsets.fromLTRB(defaultPadding, defaultPadding, defaultPadding, largePadding),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (isDrawerMode)
                     Align(
@@ -41,15 +52,21 @@ class SideMenu extends StatelessWidget {
                       child: IconButton(
                         icon: const Icon(Icons.close, color: Colors.white70),
                         onPressed: () => Navigator.of(context).pop(),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
                     ),
-                  Expanded(
-                    child: Center(
-                      child: Image.asset(
-                        "assets/images/logo light.png",
-                        height: 80,
-                        width: 80,
-                      ),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                       color: Colors.white.withOpacity(0.1),
+                       borderRadius: BorderRadius.circular(16), // Rounded square
+                       border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
+                    ),
+                    child: Image.asset(
+                      "assets/images/logo light.png",
+                      height: 60, 
+                      width: 60,
                     ),
                   ),
                 ],
@@ -86,30 +103,42 @@ class SideMenu extends StatelessWidget {
                       svgSrc: "assets/icons/stats-report.svg",
                       press: navigateToDietExerciseScreen,
                     ),
-                    DrawerListTile(
-                      title: 'Overall Statistics',
-                      svgSrc: "assets/icons/graph-up.svg",
-                      press: dummy,
-                    ),
+                    // DrawerListTile(
+                    //   title: 'Overall Statistics',
+                    //   svgSrc: "assets/icons/graph-up.svg",
+                    //   press: dummy,
+                    // ),
                   ],
                 ),
               ),
             ),
 
-            // Logout button at bottom
+            // Logout button at bottom - Refined size
             Padding(
               padding: const EdgeInsets.symmetric(vertical: defaultPadding),
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: errorColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.1), // Subtle styling instead of jarring red
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                    ),
+                  ),
+                  onPressed: () => _logout(context),
+                  icon: const Icon(Icons.logout, size: 20),
+                  label: const Text(
+                    "Logout", 
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
-                onPressed: () => _logout(context),
-                icon: const Icon(Icons.logout, color: Colors.white),
-                label: const Text("Logout", style: TextStyle(color: Colors.white)),
               ),
             ),
           ],
@@ -174,30 +203,41 @@ class _DrawerListTileState extends State<DrawerListTile> {
       onExit: (_) => setState(() => _isHovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 8), // Add spacing between items
         decoration: BoxDecoration(
           color: _isHovered
               ? Colors.white.withOpacity(0.15)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12), // More rounded
         ),
         child: ListTile(
           onTap: () => widget.press(context),
           horizontalTitleGap: 12.0,
-          leading: SvgPicture.asset(
-            widget.svgSrc,
-            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-            height: 20,
-            width: 20,
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: SvgPicture.asset(
+              widget.svgSrc,
+              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              height: 18,
+              width: 18,
+            ),
           ),
           title: Text(
             widget.title,
+            maxLines: 1, // Enforce single line
+            overflow: TextOverflow.ellipsis, // Ellipsis if too long
             style: TextStyle(
-              color: _isHovered ? Colors.white : Colors.white70,
-              fontSize: 16,
-              fontWeight: _isHovered ? FontWeight.w600 : FontWeight.normal,
+              color: _isHovered ? Colors.white : Colors.white.withOpacity(0.8),
+              fontSize: 14, // Slightly smaller to fit "Screening & Diagnosis"
+              fontWeight: _isHovered ? FontWeight.w600 : FontWeight.w500,
+              letterSpacing: 0.5,
             ),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         ),
       ),
     );
