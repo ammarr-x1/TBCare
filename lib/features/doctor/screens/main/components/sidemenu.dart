@@ -9,7 +9,14 @@ import 'package:tbcare_main/features/doctor/screens/screening/screening_daignosi
 import '../../patients/patients_screen.dart';
 
 class SideMenu extends StatelessWidget {
-  const SideMenu({super.key});
+  final int selectedIndex;
+  final Function(int) onItemSelected;
+
+  const SideMenu({
+    super.key,
+    required this.selectedIndex,
+    required this.onItemSelected,
+  });
 
   Future<void> _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
@@ -77,37 +84,37 @@ class SideMenu extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
-                  children: const [
+                  children: [
                     DrawerListTile(
                       title: 'Dashboard',
                       svgSrc: "assets/icons/hospital.svg",
-                      press: dummy,
+                      press: () => onItemSelected(0),
+                      isSelected: selectedIndex == 0,
                     ),
                     DrawerListTile(
                       title: 'Patients',
                       svgSrc: "assets/icons/activity.svg",
-                      press: navigateToPatients,
+                      press: () => onItemSelected(1),
+                      isSelected: selectedIndex == 1,
                     ),
                     DrawerListTile(
                       title: 'Screening & Diagnosis',
                       svgSrc: "assets/icons/graph-up.svg",
-                      press: navigateToScreeningAndDiagnosis,
+                      press: () => onItemSelected(2),
+                      isSelected: selectedIndex == 2,
                     ),
                     DrawerListTile(
                       title: 'Recommendation',
                       svgSrc: "assets/icons/recommendation.svg",
-                      press: navigateToRecommendations,
+                      press: () => onItemSelected(3),
+                      isSelected: selectedIndex == 3,
                     ),
                     DrawerListTile(
                       title: 'Diet & Exercise',
                       svgSrc: "assets/icons/stats-report.svg",
-                      press: navigateToDietExerciseScreen,
+                      press: () => onItemSelected(4),
+                      isSelected: selectedIndex == 4,
                     ),
-                    // DrawerListTile(
-                    //   title: 'Overall Statistics',
-                    //   svgSrc: "assets/icons/graph-up.svg",
-                    //   press: dummy,
-                    // ),
                   ],
                 ),
               ),
@@ -148,46 +155,18 @@ class SideMenu extends StatelessWidget {
   }
 }
 
-void navigateToPatients(BuildContext context) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => const PatientsScreen()),
-  );
-}
-
-void navigateToScreeningAndDiagnosis(BuildContext context) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => const ScreeningDiagnosisScreen()),
-  );
-}
-
-void navigateToRecommendations(BuildContext context) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => RecommendationScreen()),
-  );
-}
-
-void navigateToDietExerciseScreen(BuildContext context) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => const DietExerciseScreen()),
-  );
-}
-
-void dummy(BuildContext context) {}
-
 class DrawerListTile extends StatefulWidget {
   const DrawerListTile({
     super.key,
     required this.title,
     required this.svgSrc,
     required this.press,
+    this.isSelected = false,
   });
 
   final String title, svgSrc;
-  final void Function(BuildContext) press;
+  final VoidCallback press;
+  final bool isSelected;
 
   @override
   State<DrawerListTile> createState() => _DrawerListTileState();
@@ -205,13 +184,18 @@ class _DrawerListTileState extends State<DrawerListTile> {
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.only(bottom: 8), // Add spacing between items
         decoration: BoxDecoration(
-          color: _isHovered
-              ? Colors.white.withOpacity(0.15)
-              : Colors.transparent,
+          color: widget.isSelected
+              ? Colors.white.withOpacity(0.2) // Highlight selected
+              : _isHovered
+                  ? Colors.white.withOpacity(0.1)
+                  : Colors.transparent,
           borderRadius: BorderRadius.circular(12), // More rounded
+          border: widget.isSelected 
+            ? Border.all(color: Colors.white.withOpacity(0.3), width: 1)
+            : null,
         ),
         child: ListTile(
-          onTap: () => widget.press(context),
+          onTap: widget.press,
           horizontalTitleGap: 12.0,
           leading: Container(
             padding: const EdgeInsets.all(8),
@@ -231,9 +215,9 @@ class _DrawerListTileState extends State<DrawerListTile> {
             maxLines: 1, // Enforce single line
             overflow: TextOverflow.ellipsis, // Ellipsis if too long
             style: TextStyle(
-              color: _isHovered ? Colors.white : Colors.white.withOpacity(0.8),
+              color: widget.isSelected ? Colors.white : Colors.white.withOpacity(0.8),
               fontSize: 14, // Slightly smaller to fit "Screening & Diagnosis"
-              fontWeight: _isHovered ? FontWeight.w600 : FontWeight.w500,
+              fontWeight: (widget.isSelected || _isHovered) ? FontWeight.w700 : FontWeight.w500,
               letterSpacing: 0.5,
             ),
           ),
