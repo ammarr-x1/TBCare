@@ -98,13 +98,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     if (screening.finalDiagnosis != null && screening.finalDiagnosis!.isNotEmpty) {
       displayStatus = screening.finalDiagnosis!;
       isDiagnosed = true;
-    } else {
-      // Fallback to patient status if this is likely the relevant screening (e.g. latest)
-      // Or simply follow user instruction to use it if available.
-      if (widget.patient.diagnosisStatus.isNotEmpty && widget.patient.diagnosisStatus.toLowerCase() != 'pending') {
-         displayStatus = widget.patient.diagnosisStatus;
-         isDiagnosed = true;
-      }
     }
 
     // Colors

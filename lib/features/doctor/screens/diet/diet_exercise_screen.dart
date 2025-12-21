@@ -22,15 +22,42 @@ class _DietExerciseScreenState extends State<DietExerciseScreen> {
     final doctorId = FirebaseAuth.instance.currentUser?.uid;
     if (doctorId == null) return [];
 
-    final snapshot = await FirebaseFirestore.instance
-        .collection('patients')
-        .where('diagnosisStatus', isEqualTo: 'TB')
-        .where('selectedDoctor', isEqualTo: doctorId)
-        .get();
+    try {
+      // 1. Fetch all patients assigned to this doctor
+      final patientsSnapshot = await FirebaseFirestore.instance
+          .collection('patients')
+          .where('selectedDoctor', isEqualTo: doctorId)
+          .get();
 
-    return snapshot.docs
-        .map((doc) => PatientModel.fromMap(doc.data()))
-        .toList();
+      if (patientsSnapshot.docs.isEmpty) return [];
+
+      final List<PatientModel> confirmedTbPatients = [];
+
+      // 2. Check each patient's screenings for "finalDiagnosis == 'TB'"
+      // doing this concurrently for performance
+      await Future.wait(patientsSnapshot.docs.map((doc) async {
+        final patientData = doc.data();
+        final patientId = doc.id;
+
+        // Check screenings subcollection
+        final screeningSnapshot = await doc.reference
+            .collection('screenings')
+            .where('finalDiagnosis', isEqualTo: 'TB')
+            .limit(1)
+            .get();
+
+        if (screeningSnapshot.docs.isNotEmpty) {
+          patientData['uid'] = patientId;
+          confirmedTbPatients.add(PatientModel.fromMap(patientData));
+        }
+      }));
+
+      return confirmedTbPatients;
+
+    } catch (e) {
+      debugPrint("Error fetching TB patients: $e");
+      return [];
+    }
   }
 
   @override
@@ -42,89 +69,82 @@ class _DietExerciseScreenState extends State<DietExerciseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: Colors.grey[50], // Softer background
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 0,
+        centerTitle: false,
         automaticallyImplyLeading: false,
-        title: Text(
-          "Diet & Exercise Plans",
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 22,
-            letterSpacing: 0.8,
+        title: Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: Text(
+            "Diet & Exercise",
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
           ),
         ),
-        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _tbPatientsFuture = _fetchTBPatients();
+              });
+            },
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.refresh_rounded, color: primaryColor, size: 20),
+            ),
+            tooltip: "Refresh List",
+          ),
+          const SizedBox(width: 16),
+        ],
       ),
       body: FutureBuilder<List<PatientModel>>(
         future: _tbPatientsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                    strokeWidth: 3,
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    "Loading Patient Data...",
-                    style: TextStyle(
-                      color: secondaryColor.withOpacity(0.6),
-                      fontSize: 16,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
+            return const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
               ),
             );
           }
 
           if (snapshot.hasError) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, color: errorColor, size: 60),
-                  const SizedBox(height: 20),
-                  Text(
-                    "Error fetching patients: \n${snapshot.error}",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: errorColor,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline_rounded, size: 48, color: errorColor.withOpacity(0.8)),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Something went wrong",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: secondaryColor),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _tbPatientsFuture = _fetchTBPatients();
-                      });
-                    },
-                    icon: const Icon(Icons.refresh, color: Colors.white),
-                    label: const Text(
-                      "Try Again",
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    const SizedBox(height: 8),
+                    Text(
+                      "${snapshot.error}",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: secondaryColor.withOpacity(0.6)),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 25,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 5,
-                    ),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    TextButton.icon(
+                      onPressed: () => setState(() => _tbPatientsFuture = _fetchTBPatients()),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text("Try Again"),
+                      style: TextButton.styleFrom(foregroundColor: primaryColor),
+                    )
+                  ],
+                ),
               ),
             );
           }
@@ -134,19 +154,30 @@ class _DietExerciseScreenState extends State<DietExerciseScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.folder_open,
-                    color: secondaryColor.withOpacity(0.3),
-                    size: 60,
+                   Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.fitness_center_rounded, size: 64, color: primaryColor.withOpacity(0.4)),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   Text(
-                    "No TB Confirmed Patients Found.",
+                    "No Patients Found",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: secondaryColor.withOpacity(0.8),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Patients with confirmed TB will appear here\nfor diet and exercise planning.",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: secondaryColor.withOpacity(0.6),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                      color: secondaryColor.withOpacity(0.5),
                     ),
                   ),
                 ],
@@ -155,36 +186,104 @@ class _DietExerciseScreenState extends State<DietExerciseScreen> {
           }
 
           final patients = snapshot.data!;
-
-          return ListView.separated(
-            padding: const EdgeInsets.all(defaultPadding),
-            itemCount: patients.length,
-            separatorBuilder: (_, __) => const SizedBox(height: defaultPadding),
-            itemBuilder: (context, index) {
-              final patient = patients[index];
-              return DietExerciseCard(
-                patient: patient,
-                onDietTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => DietPlanScreen(patient: patient),
+          
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Summary Header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(bottom: BorderSide(color: Colors.grey[100]!)),
+                ),
+                child: Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Active Patients",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: secondaryColor.withOpacity(0.5),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              "${patients.length}",
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                color: primaryColor,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "requiring plans",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: secondaryColor.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  );
-                },
-                onExerciseTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ExercisePlanScreen(
-                        patientId: patient.uid,
-                        patientName: patient.name,
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: successColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      child: Icon(Icons.assignment_turned_in_outlined, color: successColor),
                     ),
-                  );
-                },
-              );
-            },
+                  ],
+                ),
+              ),
+
+              // Patient List
+              Expanded(
+                child: ListView.separated(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.all(24),
+                  itemCount: patients.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    final patient = patients[index];
+                    return DietExerciseCard(
+                      patient: patient,
+                      onDietTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DietPlanScreen(patient: patient),
+                          ),
+                        );
+                      },
+                      onExerciseTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ExercisePlanScreen(
+                              patientId: patient.uid,
+                              patientName: patient.name,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           );
         },
       ),

@@ -25,7 +25,7 @@ class RecommendationService {
         .collection('patients')
         .doc(patientId)
         .collection('screenings')
-        .orderBy('date', descending: true)
+        .orderBy('timestamp', descending: true)
         .limit(1)
         .get();
 
@@ -74,7 +74,7 @@ class RecommendationService {
         .collection('patients')
         .doc(patientId)
         .collection('screenings')
-        .orderBy('date', descending: true) // ✅ correct field
+        .orderBy('timestamp', descending: true) // ✅ correct field
         .limit(1)
         .get();
 

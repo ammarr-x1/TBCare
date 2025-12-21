@@ -102,7 +102,7 @@ class PatientService {
       final snapshot = await _patientsRef
           .doc(patientId)
           .collection('screenings')
-          .orderBy('date', descending: true)
+          .orderBy('timestamp', descending: true)
           .limit(1)
           .get();
 

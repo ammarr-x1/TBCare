@@ -68,6 +68,7 @@ class DiagnosisService {
       batch.update(screeningRef, {
         'status': diagnosis == 'Needs Lab Test' ? 'Needs Lab Test' : diagnosis,
         'finalDiagnosis': diagnosis == 'Needs Lab Test' ? null : diagnosis,
+        'doctorDiagnosis': diagnosis == 'Needs Lab Test' ? null : diagnosis, // Added as requested
         'diagnosedBy': doctorId,
       });
 
@@ -129,6 +130,7 @@ class DiagnosisService {
       // Update screening doc
       batch.update(screeningRef, {
         'finalDiagnosis': status,
+        'doctorDiagnosis': status, // Added as requested
         'status': status,
       });
 
