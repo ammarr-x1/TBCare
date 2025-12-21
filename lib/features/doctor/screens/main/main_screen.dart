@@ -130,25 +130,23 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
 
-      body: SafeArea(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isDesktop) Expanded(flex: 1, child: sideMenu),
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (isDesktop) Expanded(flex: 1, child: sideMenu),
 
-            // Main content
-            Expanded(
-              flex: 5,
-              // We use IndexedStack to preserve state of screens if desired,
-              // or just switchers. IndexedStack is better for "dashboard feel" (no reload).
-              // However, some screens fetch data on Init.
-              child: IndexedStack(
-                index: _selectedIndex,
-                children: _screens,
-              ),
+          // Main content
+          Expanded(
+            flex: 5,
+            // We use IndexedStack to preserve state of screens if desired,
+            // or just switchers. IndexedStack is better for "dashboard feel" (no reload).
+            // However, some screens fetch data on Init.
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: _screens,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

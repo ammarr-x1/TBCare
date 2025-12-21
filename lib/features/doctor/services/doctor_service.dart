@@ -10,6 +10,41 @@ class DoctorService {
   static String? get _doctorId => _auth.currentUser?.uid;
 
   /// ---------------- READ: Dashboard stats ----------------
+  static Future<Map<int, int>> fetchWeeklyDiagnoses() async {
+    if (_doctorId == null) return {};
+
+    final now = DateTime.now();
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+    final startOfPeriod = DateTime(sevenDaysAgo.year, sevenDaysAgo.month, sevenDaysAgo.day);
+
+    try {
+      final snapshot = await _firestore
+          .collection('doctors')
+          .doc(_doctorId)
+          .collection('diagnoses')
+          .where('createdAt', isGreaterThanOrEqualTo: startOfPeriod)
+          .get();
+
+      final Map<int, int> weeklyCounts = {
+        0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0
+      };
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['createdAt'] != null) {
+          final date = (data['createdAt'] as Timestamp).toDate();
+          final weekdayIndex = date.weekday - 1; 
+          weeklyCounts[weekdayIndex] = (weeklyCounts[weekdayIndex] ?? 0) + 1;
+        }
+      }
+      return weeklyCounts;
+    } catch (e) {
+      print("❌ Error fetching weekly diagnoses: $e");
+      return {};
+    }
+  }
+
+  /// ---------------- READ: Dashboard stats ----------------
   static Future<List<DoctorStat>> fetchDoctorStats() async {
     if (_doctorId == null) return [];
     try {

@@ -54,6 +54,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         title: Text("Patients", style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white)),

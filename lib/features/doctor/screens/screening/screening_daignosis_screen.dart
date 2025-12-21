@@ -67,6 +67,7 @@ class _ScreeningDiagnosisScreenState extends State<ScreeningDiagnosisScreen> {
     return Scaffold(
       backgroundColor: bgColor, // Use standard background
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         centerTitle: false,
         title: Text(
           "Screening & Diagnosis",

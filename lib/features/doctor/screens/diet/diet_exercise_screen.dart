@@ -6,6 +6,8 @@ import 'package:tbcare_main/features/doctor/screens/diet/diet_plan_screen.dart';
 import 'package:tbcare_main/features/doctor/screens/diet/exercise_plan_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+
 class DietExerciseScreen extends StatefulWidget {
   const DietExerciseScreen({super.key});
 
@@ -17,9 +19,13 @@ class _DietExerciseScreenState extends State<DietExerciseScreen> {
   late Future<List<PatientModel>> _tbPatientsFuture;
 
   Future<List<PatientModel>> _fetchTBPatients() async {
+    final doctorId = FirebaseAuth.instance.currentUser?.uid;
+    if (doctorId == null) return [];
+
     final snapshot = await FirebaseFirestore.instance
         .collection('patients')
         .where('diagnosisStatus', isEqualTo: 'TB')
+        .where('selectedDoctor', isEqualTo: doctorId)
         .get();
 
     return snapshot.docs
@@ -40,10 +46,7 @@ class _DietExerciseScreenState extends State<DietExerciseScreen> {
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
         title: Text(
           "Diet & Exercise Plans",
           style: Theme.of(context).textTheme.titleLarge?.copyWith(

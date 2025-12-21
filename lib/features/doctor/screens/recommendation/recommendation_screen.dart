@@ -22,17 +22,8 @@ class RecommendationScreen extends StatelessWidget {
         backgroundColor: primaryColor,
         elevation: 0,
         centerTitle: false,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: null,
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: Container(
