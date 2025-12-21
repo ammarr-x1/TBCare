@@ -51,7 +51,7 @@ class PatientCard extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 10),
+            const SizedBox(height: 4),
             Text(
               'Age: ${patient.age} | Gender: ${patient.gender}',
               style: TextStyle(
@@ -59,7 +59,7 @@ class PatientCard extends StatelessWidget {
                 fontSize: captionSize,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             if (status.isNotEmpty)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

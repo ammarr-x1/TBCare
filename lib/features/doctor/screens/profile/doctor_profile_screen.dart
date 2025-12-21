@@ -342,7 +342,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
               Expanded(
                 child: StatCardWidget(
                   title: 'Recommendations',
-                  value: _doctor.totalRecommendationGiven.toString(),
+                  value: _doctor.totalRecommendationsGiven.toString(),
                   icon: Icons.recommend,
                   color: warningColor,
                 ),

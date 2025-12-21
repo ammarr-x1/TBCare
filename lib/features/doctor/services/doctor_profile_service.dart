@@ -23,7 +23,7 @@ class DoctorProfileService {
       totalDiagnosisMade: 0,
       totalFinalVerdicts: 0,
       totalPatientsReviewed: 0,
-      totalRecommendationGiven: 0,
+      totalRecommendationsGiven: 0,
       totalTestsRequested: 0,
       profileImageUrl: null,
       email: null,
@@ -127,7 +127,7 @@ class DoctorProfileService {
           'totalDiagnosisMade': data['totalDiagnosisMade'] ?? 0,
           'totalFinalVerdicts': data['totalFinalVerdicts'] ?? 0,
           'confirmedTBCount': data['confirmedTBCount'] ?? 0,
-          'totalRecommendationGiven': data['totalRecommendationGiven'] ?? 0,
+          'totalRecommendationsGiven': data['totalRecommendationsGiven'] ?? 0,
           'totalTestsRequested': data['totalTestsRequested'] ?? 0,
         };
       }

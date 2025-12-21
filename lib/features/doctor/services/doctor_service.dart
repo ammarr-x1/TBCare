@@ -74,7 +74,7 @@ class DoctorService {
           ),
           DoctorStat(
             label: "Recommendations",
-            value: data['totalRecommendationGiven'] ?? 0,
+            value: data['totalRecommendationsGiven'] ?? 0,
             icon: "assets/icons/reports.svg",
             color: const Color(0xFF26C485),
           ),
@@ -153,7 +153,7 @@ class DoctorService {
 
     final doctorRef = _firestore.collection('doctors').doc(_doctorId);
     await doctorRef.update({
-      'totalRecommendationGiven': FieldValue.increment(1),
+      'totalRecommendationsGiven': FieldValue.increment(1),
     });
   }
 }

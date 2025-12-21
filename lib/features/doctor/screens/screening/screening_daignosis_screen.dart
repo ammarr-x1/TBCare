@@ -162,50 +162,21 @@ class _ScreeningDiagnosisScreenState extends State<ScreeningDiagnosisScreen> {
                           ],
                         ),
                       )
-                    : LayoutBuilder(
-                        builder: (context, constraints) {
-                          // Responsive Grid Logic
-                          final width = constraints.maxWidth;
-                          int crossAxisCount = 1;
-                          double aspectRatio = 0.85; // Taller cards for mobile (1 col) 
-
-                          if (width >= 1200) {
-                            crossAxisCount = 3;
-                            aspectRatio = 1.1; // Wider cards
-                          } else if (width >= 800) {
-                            crossAxisCount = 2;
-                            aspectRatio = 0.95;
-                          } else {
-                            // Mobile: 1 column, but don't stretch fully if very wide mobile
-                            crossAxisCount = 1;
-                            aspectRatio = 1.3; // Adjust based on card content height (approximate)
-                            // If AiCaseCard is dynamic height, GridView might crop it or cause overflow.
-                            // Masonry is better, but without generic package, we can use a wrap or specific constraint.
-                            // However, user specifically asked for "multiple cards like in a grid".
-                            // To be safe with dynamic height content in a Grid, consider `childAspectRatio` carefully OR
-                            // use a wrap inside a SingleChildScrollView if strict grid alignment isn't required.
-                            // But GridView is requested. Let's try to be smart about aspect ratio.
-                            // AiCaseCard has images (180px) + content. It's roughly 400-500px tall.
-                          }
-                          
-                          // Allow vertical scrolling for the grid content
-                          // Using a Wrap inside SingleChildScrollView is safer for variable height cards
-                          // to avoid "Layout overflow" within fixed grid cells.
-                          
-                          return SingleChildScrollView(
-                            padding: const EdgeInsets.all(largePadding),
-                            child: Wrap(
-                              spacing: largePadding,
-                              runSpacing: largePadding,
-                              children: _filteredCases.map((caseData) {
-                                final cardWidth = (width - (largePadding * (crossAxisCount + 1))) / crossAxisCount;
-                                return SizedBox(
-                                  width: cardWidth,
-                                  child: AiCaseCard(caseData: caseData),
-                                );
-                              }).toList(),
-                            ),
-                          );
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(largePadding),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: MediaQuery.of(context).size.width > 1100
+                              ? 3
+                              : MediaQuery.of(context).size.width > 700
+                                  ? 2
+                                  : 1,
+                          crossAxisSpacing: largePadding,
+                          mainAxisSpacing: largePadding,
+                          childAspectRatio: 0.6,
+                        ),
+                        itemCount: _filteredCases.length,
+                        itemBuilder: (context, index) {
+                          return AiCaseCard(caseData: _filteredCases[index]);
                         },
                       ),
           ),

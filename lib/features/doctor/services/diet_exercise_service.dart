@@ -131,6 +131,40 @@ class DietExerciseService {
         .update({'approvedByDoctor': true});
   }
 
+  /// -------- AI DIET RECOMMENDATION --------
+
+  static Future<Map<String, dynamic>?> fetchLatestDietRecommendation(String patientId) async {
+    final hasAccess = await _verifyPatientOwnership(patientId);
+    if (!hasAccess) return null;
+
+    try {
+      final doc = await _firestore
+          .collection('patients')
+          .doc(patientId)
+          .collection('diet_recommendations')
+          .doc('latest')
+          .get();
+
+      if (!doc.exists) return null;
+      return doc.data();
+    } catch (e) {
+      print("Error fetching diet recommendation: $e");
+      return null;
+    }
+  }
+
+  static Future<void> approveDietRecommendation(String patientId) async {
+    final hasAccess = await _verifyPatientOwnership(patientId);
+    if (!hasAccess) return;
+
+    await _firestore
+        .collection('patients')
+        .doc(patientId)
+        .collection('diet_recommendations')
+        .doc('latest')
+        .update({'approved': true});
+  }
+
   /// -------- EXERCISE PLAN --------
 
   static Future<Map<String, dynamic>?> fetchAllExercisePlans(String patientId) async {

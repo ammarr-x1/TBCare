@@ -153,7 +153,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
                               : 1,
                           crossAxisSpacing: defaultPadding,
                           mainAxisSpacing: defaultPadding,
-                          childAspectRatio: 3,
+                          childAspectRatio: 2.6,
                         ),
                         itemBuilder: (context, index) {
                           return PatientCard(patient: filteredPatients[index]);

@@ -9,7 +9,7 @@ class Doctor {
   final int totalDiagnosisMade;
   final int totalFinalVerdicts;
   final int totalPatientsReviewed;
-  final int totalRecommendationGiven;
+  final int totalRecommendationsGiven;
   final int totalTestsRequested;
   final String? profileImageUrl;
   final String? email;
@@ -30,7 +30,7 @@ class Doctor {
     required this.totalDiagnosisMade,
     required this.totalFinalVerdicts,
     required this.totalPatientsReviewed,
-    required this.totalRecommendationGiven,
+    required this.totalRecommendationsGiven,
     required this.totalTestsRequested,
     this.profileImageUrl,
     this.email,
@@ -53,7 +53,7 @@ class Doctor {
       totalDiagnosisMade: data['totalDiagnosisMade'] ?? 0,
       totalFinalVerdicts: data['totalFinalVerdicts'] ?? 0,
       totalPatientsReviewed: data['totalPatientsReviewed'] ?? 0,
-      totalRecommendationGiven: data['totalRecommendationGiven'] ?? 0,
+      totalRecommendationsGiven: data['totalRecommendationsGiven'] ?? 0,
       totalTestsRequested: data['totalTestsRequested'] ?? 0,
       profileImageUrl: data['profileImageUrl'],
       email: data['email'],
@@ -76,7 +76,7 @@ class Doctor {
       'totalDiagnosisMade': totalDiagnosisMade,
       'totalFinalVerdicts': totalFinalVerdicts,
       'totalPatientsReviewed': totalPatientsReviewed,
-      'totalRecommendationGiven': totalRecommendationGiven,
+      'totalRecommendationsGiven': totalRecommendationsGiven,
       'totalTestsRequested': totalTestsRequested,
       if (profileImageUrl != null) 'profileImageUrl': profileImageUrl,
       if (email != null) 'email': email,
@@ -99,7 +99,7 @@ class Doctor {
     int? totalDiagnosisMade,
     int? totalFinalVerdicts,
     int? totalPatientsReviewed,
-    int? totalRecommendationGiven,
+    int? totalRecommendationsGiven,
     int? totalTestsRequested,
     String? profileImageUrl,
     String? email,
@@ -120,7 +120,7 @@ class Doctor {
       totalDiagnosisMade: totalDiagnosisMade ?? this.totalDiagnosisMade,
       totalFinalVerdicts: totalFinalVerdicts ?? this.totalFinalVerdicts,
       totalPatientsReviewed: totalPatientsReviewed ?? this.totalPatientsReviewed,
-      totalRecommendationGiven: totalRecommendationGiven ?? this.totalRecommendationGiven,
+      totalRecommendationsGiven: totalRecommendationsGiven ?? this.totalRecommendationsGiven,
       totalTestsRequested: totalTestsRequested ?? this.totalTestsRequested,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       email: email ?? this.email,

@@ -86,20 +86,20 @@ class _AiCaseCardState extends State<AiCaseCard> {
       shadowColor: Colors.black.withOpacity(0.08),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(largePadding),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildMedia(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildDetails(),
             if (errorMessage != null) ...[
               const SizedBox(height: 8),
               _buildErrorBanner(),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildActions(context),
           ],
         ),
@@ -159,7 +159,7 @@ class _AiCaseCardState extends State<AiCaseCard> {
 
   Widget _buildMedia() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
@@ -230,7 +230,7 @@ class _AiCaseCardState extends State<AiCaseCard> {
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
                 widget.caseData.mediaUrl,
-                height: 180,
+                height: 150,
                 width: double.infinity,
                 fit: BoxFit.cover,
               ),
