@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:tbcare_main/core/app_constants.dart';
@@ -20,6 +21,7 @@ class CaseActionModal extends StatefulWidget {
 }
 
 class _CaseActionModalState extends State<CaseActionModal> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _noteController = TextEditingController();
   final TextEditingController _requestedTestController =
       TextEditingController();
@@ -36,21 +38,15 @@ class _CaseActionModalState extends State<CaseActionModal> {
   }
 
   Future<void> _submitDiagnosis() async {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
     final note = _noteController.text.trim();
     final diagnosis = _diagnosis ?? '';
     final requestedTest = _diagnosis == 'Needs Lab Test'
         ? _requestedTestController.text.trim()
         : null;
-
-    if (diagnosis.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Please select a diagnosis."),
-          backgroundColor: errorColor,
-        ),
-      );
-      return;
-    }
 
     setState(() => isSubmitting = true);
 
@@ -90,27 +86,36 @@ class _CaseActionModalState extends State<CaseActionModal> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
-      elevation: 15,
-      backgroundColor: Colors.transparent,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20.0),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Leave 25% margin on left and right for larger screens, otherwise use default padding
+    final horizontalPadding = screenWidth > 800 ? screenWidth * 0.25 : 16.0;
+
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+      child: Dialog(
+        insetPadding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24.0),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+        elevation: 15,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20.0),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
         padding: const EdgeInsets.all(28.0),
         child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               // Header
               Row(
                 children: [
@@ -190,6 +195,7 @@ class _CaseActionModalState extends State<CaseActionModal> {
                 items: ['TB', 'Not TB', 'Needs Lab Test'],
                 onChanged: (value) => setState(() => _diagnosis = value),
                 icon: Icons.assignment_turned_in,
+                validator: (value) => value == null || value.isEmpty ? 'Please select a diagnosis' : null,
               ),
               const SizedBox(height: 20),
 
@@ -201,6 +207,7 @@ class _CaseActionModalState extends State<CaseActionModal> {
                       labelText: "Requested Test",
                       maxLines: 1,
                       icon: Icons.science,
+                      validator: (value) => value == null || value.trim().isEmpty ? 'Please specify the requested test' : null,
                     ),
                     const SizedBox(height: 12),
                     Container(
@@ -239,63 +246,61 @@ class _CaseActionModalState extends State<CaseActionModal> {
               
               // Action Buttons
               Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: secondaryColor,
-                        side: BorderSide(color: secondaryColor.withOpacity(0.3)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: secondaryColor,
+                      side: BorderSide(color: secondaryColor.withOpacity(0.3)),
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
-                        "Cancel",
-                        style: TextStyle(
-                          fontSize: bodySize,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    ),
+                    child: Text(
+                      "Cancel",
+                      style: TextStyle(
+                        fontSize: bodySize,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: isSubmitting ? null : _submitDiagnosis,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 3,
+                  ElevatedButton(
+                    onPressed: isSubmitting ? null : _submitDiagnosis,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 32),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: isSubmitting
-                          ? SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              "Save Action",
-                              style: TextStyle(
-                                fontSize: bodySize,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                      elevation: 3,
                     ),
+                    child: isSubmitting
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            "Save Action",
+                            style: TextStyle(
+                              fontSize: bodySize,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ],
               ),
             ],
           ),
+        ),
+      ),
         ),
       ),
     );
@@ -306,6 +311,7 @@ class _CaseActionModalState extends State<CaseActionModal> {
     required String labelText,
     int maxLines = 1,
     IconData? icon,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,9 +333,10 @@ class _CaseActionModalState extends State<CaseActionModal> {
           ),
           const SizedBox(height: 8),
         ],
-        TextField(
+        TextFormField(
           controller: controller,
           maxLines: maxLines,
+          validator: validator,
           style: TextStyle(color: secondaryColor, fontSize: bodySize),
           decoration: InputDecoration(
             labelText: icon == null ? labelText : null,
@@ -364,6 +371,7 @@ class _CaseActionModalState extends State<CaseActionModal> {
     required List<String> items,
     required ValueChanged<String?> onChanged,
     IconData? icon,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,6 +395,7 @@ class _CaseActionModalState extends State<CaseActionModal> {
         ],
         DropdownButtonFormField<String>(
           value: value,
+          validator: validator,
           decoration: InputDecoration(
             labelText: icon == null ? labelText : null,
             labelStyle: TextStyle(color: secondaryColor.withOpacity(0.7)),

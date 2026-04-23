@@ -1,11 +1,69 @@
 import 'package:flutter/material.dart';
 import 'package:tbcare_main/core/app_constants.dart';
 import '../../../models/ai_case_model.dart';
+import '../../../services/screening_service.dart';
 
-class CaseDetailDialog extends StatelessWidget {
+class CaseDetailDialog extends StatefulWidget {
   final AiCaseModel caseData;
 
   const CaseDetailDialog({super.key, required this.caseData});
+
+  @override
+  State<CaseDetailDialog> createState() => _CaseDetailDialogState();
+}
+
+class _CaseDetailDialogState extends State<CaseDetailDialog> {
+  String? fetchedNotes;
+  String? requestedTest;
+  bool isLoadingNotes = true;
+
+  AiCaseModel get caseData => widget.caseData;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDiagnosisDetails();
+  }
+
+  Future<void> _fetchDiagnosisDetails() async {
+    try {
+      final details = await ScreeningService.fetchLatestDiagnosisStatus(
+        patientId: widget.caseData.patientId,
+        screeningId: widget.caseData.screeningId,
+      );
+      if (mounted) {
+        setState(() {
+          fetchedNotes = details?['notes'] as String?;
+          requestedTest = details?['requestedTest'] as String?;
+          isLoadingNotes = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoadingNotes = false;
+        });
+      }
+    }
+  }
+
+  String _getDisplayNotes() {
+    List<String> notesParts = [];
+    if (widget.caseData.doctorNotes?.isNotEmpty == true) {
+      notesParts.add(widget.caseData.doctorNotes!);
+    }
+    if (fetchedNotes?.isNotEmpty == true) {
+      notesParts.add(fetchedNotes!);
+    }
+    if (requestedTest?.isNotEmpty == true) {
+      notesParts.add("Suggested Test: $requestedTest");
+    }
+    
+    if (notesParts.isEmpty) {
+      return 'No notes added yet';
+    }
+    return notesParts.join('\n\n');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -213,19 +271,23 @@ class CaseDetailDialog extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.grey[200]!),
                           ),
-                          child: Text(
-                            caseData.doctorNotes?.isNotEmpty == true 
-                                ? caseData.doctorNotes! 
-                                : 'No notes added yet',
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.5,
-                              color: caseData.doctorNotes?.isNotEmpty == true 
-                                  ? secondaryColor.withOpacity(0.8) 
-                                  : secondaryColor.withOpacity(0.4),
-                              fontStyle: caseData.doctorNotes?.isNotEmpty == true ? FontStyle.normal : FontStyle.italic,
-                            ),
-                          ),
+                          child: isLoadingNotes
+                              ? const Center(
+                                  child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2)))
+                              : Text(
+                                  _getDisplayNotes(),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    height: 1.5,
+                                    color: _getDisplayNotes() != 'No notes added yet'
+                                        ? secondaryColor.withOpacity(0.8)
+                                        : secondaryColor.withOpacity(0.4),
+                                    fontStyle: _getDisplayNotes() != 'No notes added yet' ? FontStyle.normal : FontStyle.italic,
+                                  ),
+                                ),
                         ),
                       ],
                     ),
@@ -239,14 +301,6 @@ class CaseDetailDialog extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      foregroundColor: secondaryColor.withOpacity(0.7),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    ),
-                    child: const Text("Cancel"),
-                  ),
                   const SizedBox(width: 16),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -309,7 +363,10 @@ class CaseDetailDialog extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: secondaryColor.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w500)),
+        Expanded(
+          child: Text(label, style: TextStyle(color: secondaryColor.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w500)),
+        ),
+        const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
