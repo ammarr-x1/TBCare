@@ -196,11 +196,14 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
 
   Widget _buildAIUI(DietRecommendationModel plan) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           // Header with Date
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -256,11 +259,11 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
           GridView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 3.0,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 420,
+              childAspectRatio: 3.5,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
             ),
             children: [
               _buildDetailCard("Activity Level", plan.activityLevel ?? "N/A", Icons.directions_run_outlined),
@@ -335,7 +338,9 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
             ),
           ),
           const SizedBox(height: 40),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -363,7 +368,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
 
   Widget _buildDetailCard(String label, String value, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -379,14 +384,14 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: primaryColor.withOpacity(0.08),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: primaryColor, size: 18),
+            child: Icon(icon, color: primaryColor, size: 24),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,14 +399,14 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(fontSize: 10, color: secondaryColor.withOpacity(0.6), fontWeight: FontWeight.w600, letterSpacing: 0.3),
+                  style: TextStyle(fontSize: 12, color: secondaryColor.withOpacity(0.6), fontWeight: FontWeight.w600, letterSpacing: 0.5),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, color: secondaryColor, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 16, color: secondaryColor, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -427,12 +432,12 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
         String content = line.trim().substring(1).trim();
          spans.add(
           Padding(
-            padding: const EdgeInsets.only(bottom: 6, left: 8),
+            padding: const EdgeInsets.only(bottom: 12, left: 16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("•", style: TextStyle(color: primaryColor, fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
+                Text("•", style: TextStyle(color: primaryColor, fontSize: 18, fontWeight: FontWeight.bold, height: 1.4)),
+                const SizedBox(width: 16),
                 Expanded(child: _parseRichText(content)),
               ],
             ),
@@ -442,7 +447,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
         // Normal text
         spans.add(
           Padding(
-            padding: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.only(bottom: 12),
             child: _parseRichText(line),
           ),
         );
@@ -461,13 +466,13 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       if (match.start > lastMatchEnd) {
         children.add(TextSpan(
           text: text.substring(lastMatchEnd, match.start),
-          style: TextStyle(color: secondaryColor, fontSize: 15, height: 1.5),
+          style: TextStyle(color: secondaryColor, fontSize: 16, height: 1.6),
         ));
       }
       
       children.add(TextSpan(
         text: match.group(1),
-        style: TextStyle(color: secondaryColor, fontWeight: FontWeight.bold, fontSize: 15, height: 1.5),
+        style: TextStyle(color: secondaryColor, fontWeight: FontWeight.bold, fontSize: 16, height: 1.6),
       ));
       
       lastMatchEnd = match.end;
@@ -476,7 +481,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
     if (lastMatchEnd < text.length) {
       children.add(TextSpan(
         text: text.substring(lastMatchEnd),
-        style: TextStyle(color: secondaryColor, fontSize: 15, height: 1.5),
+        style: TextStyle(color: secondaryColor, fontSize: 16, height: 1.6),
       ));
     }
     
@@ -502,9 +507,12 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(defaultPadding),
-      children: _legacyPlans.entries.map((entry) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 900),
+        child: ListView(
+          padding: const EdgeInsets.all(defaultPadding),
+          children: _legacyPlans.entries.map((entry) {
         // ... (Keep existing legacy item builder logic but modernized slightly if needed)
         // For brevity and minimal risk, using a simplified version of the old code structure
         
@@ -563,6 +571,8 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
            ),
         );
       }).toList(),
+        ),
+      ),
     );
   }
 }

@@ -4,8 +4,22 @@ import '../../models/patient_model.dart';
 import '../../services/patient_service.dart';
 import 'components/recommendation_card.dart';
 
-class RecommendationScreen extends StatelessWidget {
+class RecommendationScreen extends StatefulWidget {
   const RecommendationScreen({super.key});
+
+  @override
+  State<RecommendationScreen> createState() => _RecommendationScreenState();
+}
+
+class _RecommendationScreenState extends State<RecommendationScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,8 +49,7 @@ class RecommendationScreen extends StatelessWidget {
               child: const Icon(Icons.refresh, size: 20, color: Colors.white),
             ),
             onPressed: () {
-              // ignore: invalid_use_of_protected_member
-              (context as Element).reassemble();
+              setState(() {});
             },
             tooltip: 'Refresh',
           ),
@@ -125,20 +138,49 @@ class RecommendationScreen extends StatelessWidget {
             ),
           ),
 
-          // List Header
+          // List Header and Search Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: defaultPadding),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Patient List",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: secondaryColor,
+                Row(
+                  children: [
+                    Text(
+                      "Patient List",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: secondaryColor,
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(Icons.filter_list, size: 20, color: secondaryColor.withOpacity(0.5)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  decoration: InputDecoration(
+                    hintText: "Search patients by name...",
+                    prefixIcon: const Icon(Icons.search, color: primaryColor),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: primaryColor, width: 2),
+                    ),
                   ),
                 ),
-                const Spacer(),
-                Icon(Icons.filter_list, size: 20, color: secondaryColor.withOpacity(0.5)),
               ],
             ),
           ),
@@ -174,19 +216,26 @@ class RecommendationScreen extends StatelessWidget {
                   );
                 }
 
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                var tbPatients = snapshot.data ?? [];
+                
+                // Apply Search Filter
+                if (_searchQuery.isNotEmpty) {
+                  tbPatients = tbPatients.where((p) => p.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+                }
+
+                if (tbPatients.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.folder_open_outlined,
+                          Icons.search_off_rounded,
                           size: 64,
                           color: secondaryColor.withOpacity(0.3),
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          "No TB patients found",
+                          "No patients found",
                           style: TextStyle(
                             color: secondaryColor.withOpacity(0.6),
                             fontSize: 16,
@@ -197,8 +246,6 @@ class RecommendationScreen extends StatelessWidget {
                     ),
                   );
                 }
-
-                final tbPatients = snapshot.data!;
 
                 return ListView.builder(
                   physics: const BouncingScrollPhysics(),

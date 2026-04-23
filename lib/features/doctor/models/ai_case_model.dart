@@ -69,9 +69,9 @@ class AiCaseModel {
       status: data['status'] ?? 'Pending Review',
       finalDiagnosis: data['doctorDiagnosis'],
       diagnosedBy: data['diagnosedBy'],
-      doctorNotes: data['doctorDiagnosis'] != null
+      doctorNotes: data['doctorNotes'] as String? ?? (data['doctorDiagnosis'] != null
           ? "Diagnosis: ${data['doctorDiagnosis']}"
-          : null,
+          : null),
       symptoms: symptomsMap,
     );
   }

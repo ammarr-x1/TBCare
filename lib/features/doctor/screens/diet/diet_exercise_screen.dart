@@ -17,6 +17,14 @@ class DietExerciseScreen extends StatefulWidget {
 
 class _DietExerciseScreenState extends State<DietExerciseScreen> {
   late Future<List<PatientModel>> _tbPatientsFuture;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<List<PatientModel>> _fetchTBPatients() async {
     final doctorId = FirebaseAuth.instance.currentUser?.uid;
@@ -185,7 +193,11 @@ class _DietExerciseScreenState extends State<DietExerciseScreen> {
             );
           }
 
-          final patients = snapshot.data!;
+          var patients = snapshot.data!;
+          
+          if (_searchQuery.isNotEmpty) {
+            patients = patients.where((p) => p.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+          }
           
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,39 +261,78 @@ class _DietExerciseScreenState extends State<DietExerciseScreen> {
                 ),
               ),
 
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  decoration: InputDecoration(
+                    hintText: "Search patients by name...",
+                    prefixIcon: const Icon(Icons.search, color: primaryColor),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: primaryColor, width: 2),
+                    ),
+                  ),
+                ),
+              ),
+
               // Patient List
               Expanded(
-                child: ListView.separated(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.all(24),
-                  itemCount: patients.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    final patient = patients[index];
-                    return DietExerciseCard(
-                      patient: patient,
-                      onDietTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => DietPlanScreen(patient: patient),
-                          ),
-                        );
-                      },
-                      onExerciseTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ExercisePlanScreen(
-                              patientId: patient.uid,
-                              patientName: patient.name,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+                child: patients.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.search_off_rounded, size: 48, color: secondaryColor.withOpacity(0.3)),
+                            const SizedBox(height: 16),
+                            Text("No patients found", style: TextStyle(color: secondaryColor.withOpacity(0.6))),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.all(24),
+                        itemCount: patients.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 16),
+                        itemBuilder: (context, index) {
+                          final patient = patients[index];
+                          return DietExerciseCard(
+                            patient: patient,
+                            onDietTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => DietPlanScreen(patient: patient),
+                                ),
+                              );
+                            },
+                            onExerciseTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ExercisePlanScreen(
+                                    patientId: patient.uid,
+                                    patientName: patient.name,
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
               ),
             ],
           );

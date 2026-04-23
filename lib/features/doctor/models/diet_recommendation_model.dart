@@ -36,9 +36,15 @@ class DietRecommendationModel {
       return null;
     }
 
+    num? parseNum(dynamic val) {
+      if (val is num) return val;
+      if (val is String) return num.tryParse(val);
+      return null;
+    }
+
     return DietRecommendationModel(
       activityLevel: map['activityLevel'],
-      age: map['age'],
+      age: parseNum(map['age']),
       allergies: map['allergies'],
       appetite: map['appetite'],
       approved: map['approved'] ?? false,
@@ -48,7 +54,7 @@ class DietRecommendationModel {
       gender: map['gender'],
       generatedAt: getTimestamp(map['generatedAt']),
       symptoms: map['symptoms'],
-      weight: map['weight'],
+      weight: parseNum(map['weight']),
     );
   }
 

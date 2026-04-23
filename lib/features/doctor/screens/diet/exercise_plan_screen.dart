@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tbcare_main/core/constants.dart';
+import 'package:tbcare_main/core/app_constants.dart';
 import 'package:tbcare_main/features/doctor/models/plan_item_model.dart';
 import 'package:tbcare_main/features/doctor/services/diet_exercise_service.dart';
 
@@ -150,12 +150,12 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: bgColor,
+        backgroundColor: primaryColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white70),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -176,11 +176,14 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
                 strokeWidth: 3,
               ),
             )
-          : Padding(
-              padding: const EdgeInsets.all(defaultPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                   if (_approved)
                     _buildStatusBanner(
                       label: "This plan has been approved by a doctor.",
@@ -199,16 +202,12 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
                     Text(
                       "Add New Exercise",
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+                        color: secondaryColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const Divider(
-                      color: Colors.white12,
-                      thickness: 1,
-                      height: 20,
-                    ),
+                    const SizedBox(height: 16),
                     _buildInputRow(),
                     const SizedBox(height: 25),
                   ],
@@ -216,16 +215,12 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
                   Text(
                     "Plan Items",
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      color: secondaryColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const Divider(
-                    color: Colors.white12,
-                    thickness: 1,
-                    height: 20,
-                  ),
+                  const SizedBox(height: 16),
                   Expanded(
                     child: _items.isEmpty
                         ? Center(
@@ -234,14 +229,14 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
                               children: [
                                 Icon(
                                   Icons.fitness_center_outlined,
-                                  color: Colors.white54,
-                                  size: 50,
+                                  color: secondaryColor.withOpacity(0.2),
+                                  size: 64,
                                 ),
-                                const SizedBox(height: 15),
+                                const SizedBox(height: 16),
                                 Text(
                                   "No exercises added yet.",
                                   style: TextStyle(
-                                    color: Colors.white70,
+                                    color: secondaryColor.withOpacity(0.6),
                                     fontSize: 16,
                                   ),
                                 ),
@@ -294,6 +289,8 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
                 ],
               ),
             ),
+          ),
+        ),
     );
   }
 
@@ -303,20 +300,20 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
     required IconData icon,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.5)),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(width: 12),
+          Icon(icon, color: color, size: 28),
+          const SizedBox(width: 16),
           Expanded(
             child: Text(
               label,
-              style: TextStyle(color: color, fontWeight: FontWeight.w500),
+              style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ),
         ],
@@ -372,29 +369,29 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
   }) {
     return TextField(
       controller: controller,
-      style: const TextStyle(color: Colors.white, fontSize: 16),
+      style: TextStyle(color: secondaryColor, fontSize: 15),
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
-        hintStyle: TextStyle(color: Colors.white38),
-        labelStyle: TextStyle(color: Colors.white70),
+        hintStyle: TextStyle(color: secondaryColor.withOpacity(0.4)),
+        labelStyle: TextStyle(color: secondaryColor.withOpacity(0.7)),
         filled: true,
-        fillColor: secondaryColor.withOpacity(0.4),
+        fillColor: Colors.white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.white10),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: primaryColor, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 15,
-          vertical: 12,
+          horizontal: 16,
+          vertical: 16,
         ),
       ),
     );
@@ -402,45 +399,49 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
 
   Widget _buildListItem(PlanItemModel item, bool canDelete) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: secondaryColor,
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 5,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: defaultPadding,
+          horizontal: 20,
           vertical: 8,
         ),
         title: Text(
           item.name,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
+          style: TextStyle(
+            color: secondaryColor,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        subtitle: Text(
-          item.quantity,
-          style: TextStyle(
-            color: Colors.white60,
-            fontSize: 14,
-            fontStyle: FontStyle.italic,
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            item.quantity,
+            style: TextStyle(
+              color: secondaryColor.withOpacity(0.6),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         trailing: canDelete
             ? IconButton(
                 icon: Icon(
                   Icons.delete_outline_rounded,
-                  color: Colors.redAccent,
-                  size: 26,
+                  color: errorColor,
+                  size: 24,
                 ),
                 onPressed: () => _deleteItem(item),
                 tooltip: "Remove exercise",

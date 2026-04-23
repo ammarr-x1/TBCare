@@ -70,6 +70,7 @@ class DiagnosisService {
         'finalDiagnosis': diagnosis == 'Needs Lab Test' ? null : diagnosis,
         'doctorDiagnosis': diagnosis == 'Needs Lab Test' ? null : diagnosis, // Added as requested
         'diagnosedBy': doctorId,
+        'doctorNotes': notes,
       });
 
       // Update patient status if final
@@ -132,6 +133,7 @@ class DiagnosisService {
         'finalDiagnosis': status,
         'doctorDiagnosis': status, // Added as requested
         'status': status,
+        'doctorNotes': notes,
       });
 
       // Update patient

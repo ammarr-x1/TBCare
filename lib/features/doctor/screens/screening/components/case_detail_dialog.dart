@@ -52,7 +52,7 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
     if (widget.caseData.doctorNotes?.isNotEmpty == true) {
       notesParts.add(widget.caseData.doctorNotes!);
     }
-    if (fetchedNotes?.isNotEmpty == true) {
+    if (fetchedNotes?.isNotEmpty == true && fetchedNotes != widget.caseData.doctorNotes) {
       notesParts.add(fetchedNotes!);
     }
     if (requestedTest?.isNotEmpty == true) {
@@ -63,6 +63,42 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
       return 'No notes added yet';
     }
     return notesParts.join('\n\n');
+  }
+
+  void _showExpandedImage(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.network(imageUrl, fit: BoxFit.contain),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -384,17 +420,46 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
 
   Widget _buildMediaContent() {
     if (caseData.mediaType == 'xray') {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: AspectRatio(
-          aspectRatio: 16 / 9, // Proper aspect ratio
-          child: Image.network(
-            caseData.mediaUrl,
-            fit: BoxFit.cover,
-            loadingBuilder: (context, child, p) => p == null ? child : Container(color: Colors.grey[100], child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),
-            errorBuilder: (_, __, ___) => Container(
-              color: Colors.grey[100],
-              child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+      return GestureDetector(
+        onTap: () => _showExpandedImage(context, caseData.mediaUrl),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 9, // Proper aspect ratio
+                  child: Image.network(
+                    caseData.mediaUrl,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, p) => p == null ? child : Container(color: Colors.grey[100], child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),
+                    errorBuilder: (_, __, ___) => Container(
+                      color: Colors.grey[100],
+                      child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.fullscreen, color: Colors.white, size: 16),
+                        SizedBox(width: 4),
+                        Text("Expand", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

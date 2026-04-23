@@ -99,12 +99,14 @@ class _TestReviewScreenState extends State<TestReviewScreen> {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(defaultPadding),
-        child: isLoading
-            ? Center(child: CircularProgressIndicator(color: primaryColor))
-            : SingleChildScrollView(
-                child: Column(
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          padding: const EdgeInsets.all(defaultPadding),
+          child: isLoading
+              ? Center(child: CircularProgressIndicator(color: primaryColor))
+              : SingleChildScrollView(
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -175,19 +177,23 @@ class _TestReviewScreenState extends State<TestReviewScreen> {
                               ),
                             ),
                             subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(test.status).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  test.status,
-                                  style: TextStyle(
-                                    color: _getStatusColor(test.status),
-                                    fontSize: captionSize,
-                                    fontWeight: FontWeight.w500,
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: _getStatusColor(test.status).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: _getStatusColor(test.status).withOpacity(0.3)),
+                                  ),
+                                  child: Text(
+                                    test.status,
+                                    style: TextStyle(
+                                      color: _getStatusColor(test.status),
+                                      fontSize: captionSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -201,17 +207,40 @@ class _TestReviewScreenState extends State<TestReviewScreen> {
                           ),
                         ),
                       ),
-                    const SizedBox(height: 24),
-                    Text(
-                      "Final Diagnosis",
-                      style: TextStyle(
-                        color: secondaryColor,
-                        fontSize: titleSize,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 32),
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                        border: Border.all(color: secondaryColor.withOpacity(0.1)),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.medical_information, color: primaryColor),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Final Diagnosis",
+                                style: TextStyle(
+                                  color: secondaryColor,
+                                  fontSize: titleSize,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          DropdownButtonFormField<String>(
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
@@ -272,26 +301,46 @@ class _TestReviewScreenState extends State<TestReviewScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: saveFinalDiagnosis,
-                        icon: Icon(Icons.check_circle),
-                        label: Text("Confirm Diagnosis"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(defaultRadius),
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: secondaryColor,
+                            side: BorderSide(color: secondaryColor.withOpacity(0.3)),
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(defaultRadius),
+                            ),
+                          ),
+                          child: const Text("Cancel"),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton.icon(
+                          onPressed: saveFinalDiagnosis,
+                          icon: const Icon(Icons.check_circle),
+                          label: const Text("Confirm Diagnosis"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(defaultRadius),
+                            ),
+                            elevation: 2,
                           ),
                         ),
+                      ],
+                    ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
+        ),
       ),
     );
   }

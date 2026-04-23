@@ -22,6 +22,7 @@ class AiCaseCard extends StatefulWidget {
 }
 
 class _AiCaseCardState extends State<AiCaseCard> {
+  late AiCaseModel _currentCaseData;
   late String caseStatus;
   String? doctorNote;
   String? testRequested;
@@ -32,8 +33,9 @@ class _AiCaseCardState extends State<AiCaseCard> {
   @override
   void initState() {
     super.initState();
-    caseStatus = widget.caseData.status;
-    doctorNote = widget.caseData.doctorNotes;
+    _currentCaseData = widget.caseData;
+    caseStatus = _currentCaseData.status;
+    doctorNote = _currentCaseData.doctorNotes;
     _fetchLatestDiagnosisStatus();
   }
 
@@ -61,6 +63,11 @@ class _AiCaseCardState extends State<AiCaseCard> {
               ? requestedTest
               : testRequested;
           showReviewButton = status == _DiagStatus.lab;
+          
+          _currentCaseData = _currentCaseData.copyWith(
+            status: caseStatus,
+            doctorNotes: doctorNote,
+          );
           isLoading = false;
         });
       } else {
@@ -131,7 +138,7 @@ class _AiCaseCardState extends State<AiCaseCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.caseData.patientName,
+                      _currentCaseData.patientName,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: bodySize,
@@ -140,7 +147,7 @@ class _AiCaseCardState extends State<AiCaseCard> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      widget.caseData.date.toLocal().toString().split(' ')[0],
+                      _currentCaseData.date.toLocal().toString().split(' ')[0],
                       style: TextStyle(
                         color: secondaryColor.withOpacity(0.6),
                         fontSize: captionSize,
@@ -196,7 +203,7 @@ class _AiCaseCardState extends State<AiCaseCard> {
             ],
           ),
           
-          if (widget.caseData.mediaType == "xray" || widget.caseData.mediaType == "both") ...[
+          if (_currentCaseData.mediaType == "xray" || _currentCaseData.mediaType == "both") ...[
             const SizedBox(height: 12),
             Row(
               children: [
@@ -229,7 +236,7 @@ class _AiCaseCardState extends State<AiCaseCard> {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
-                widget.caseData.mediaUrl,
+                _currentCaseData.mediaUrl,
                 height: 150,
                 width: double.infinity,
                 fit: BoxFit.cover,
@@ -272,7 +279,7 @@ class _AiCaseCardState extends State<AiCaseCard> {
           ),
           const SizedBox(height: 8),
           Text(
-            "${widget.caseData.aiResult ?? 'Analysis pending'} ${widget.caseData.aiConfidence != null ? '(${widget.caseData.aiConfidence}%)' : ''}",
+            "${_currentCaseData.aiResult ?? 'Analysis pending'} ${_currentCaseData.aiConfidence != null ? '(${_currentCaseData.aiConfidence}%)' : ''}",
             style: TextStyle(
               color: secondaryColor.withOpacity(0.8),
               fontSize: captionSize,
@@ -350,7 +357,7 @@ class _AiCaseCardState extends State<AiCaseCard> {
           child: OutlinedButton.icon(
             onPressed: () => showDialog(
               context: context,
-              builder: (_) => CaseDetailDialog(caseData: widget.caseData),
+              builder: (_) => CaseDetailDialog(caseData: _currentCaseData),
             ),
             icon: const Icon(Icons.visibility, size: 16),
             label: const Text("View Details"),
@@ -370,13 +377,18 @@ class _AiCaseCardState extends State<AiCaseCard> {
             onPressed: () => showDialog(
               context: context,
               builder: (_) => CaseActionModal(
-                caseData: widget.caseData,
+                caseData: _currentCaseData,
                 onActionSaved: (diagnosis, notes, requestedTest) {
                   setState(() {
                     caseStatus = diagnosis;
                     doctorNote = notes;
                     testRequested = requestedTest;
                     showReviewButton = (diagnosis == _DiagStatus.lab);
+                    
+                    _currentCaseData = _currentCaseData.copyWith(
+                      status: diagnosis,
+                      doctorNotes: notes,
+                    );
                   });
                 },
               ),
@@ -397,13 +409,14 @@ class _AiCaseCardState extends State<AiCaseCard> {
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => TestReviewScreen(caseData: widget.caseData),
+                    builder: (_) => TestReviewScreen(caseData: _currentCaseData),
                   ),
                 );
+                _fetchLatestDiagnosisStatus();
               },
               icon: const Icon(Icons.science_outlined, size: 16),
               label: const Text("Review Tests"),
