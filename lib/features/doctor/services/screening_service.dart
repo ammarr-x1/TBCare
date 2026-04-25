@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/screening_model.dart';
@@ -32,7 +33,7 @@ class ScreeningService {
       // HIPAA: Verify patient belongs to this doctor
       final hasAccess = await _verifyPatientOwnership(patientId);
       if (!hasAccess) {
-        print("⚠️ Access denied: Patient not assigned to this doctor");
+        debugPrint("⚠️ Access denied: Patient not assigned to this doctor");
         return [];
       }
 
@@ -46,7 +47,7 @@ class ScreeningService {
           .map((doc) => ScreeningModel.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
-      print("❌ Error fetching screenings for $patientId: $e");
+      debugPrint("❌ Error fetching screenings for $patientId: $e");
       return [];
     }
   }
@@ -60,7 +61,7 @@ class ScreeningService {
     try {
       final doctorId = _currentDoctorId;
       if (doctorId == null) {
-        print("⚠️ No authenticated doctor found");
+        debugPrint("⚠️ No authenticated doctor found");
         return [];
       }
 
@@ -69,34 +70,52 @@ class ScreeningService {
           .where('selectedDoctor', isEqualTo: doctorId)
           .get();
 
-      for (final patientDoc in patientsSnapshot.docs) {
+      // PERFORMANCE OPTIMIZATION:
+      // Instead of awaiting each patient's screening sequentially (N+1 bottleneck),
+      // we map them to futures and await them all concurrently.
+      final futures = patientsSnapshot.docs.map((patientDoc) async {
         final patientId = patientDoc.id;
         final patientName = patientDoc['name'] ?? '';
+        final List<AiCaseModel> patientCases = [];
 
-        final screeningsSnapshot = await patientDoc.reference
-            .collection('screenings')
-            .orderBy('timestamp', descending: true)
-            .limit(limitPerPatient)
-            .get();
+        try {
+          final screeningsSnapshot = await patientDoc.reference
+              .collection('screenings')
+              .orderBy('timestamp', descending: true)
+              .limit(limitPerPatient)
+              .get();
 
-        for (final screeningDoc in screeningsSnapshot.docs) {
-          try {
-            final caseModel = AiCaseModel.fromFirestore(
-              screeningDoc,
-              patientId,
-              patientName,
-            );
-            allCases.add(caseModel);
-          } catch (e) {
-            print("❌ Error parsing screening for $patientId: $e");
+          for (final screeningDoc in screeningsSnapshot.docs) {
+            try {
+              final caseModel = AiCaseModel.fromFirestore(
+                screeningDoc,
+                patientId,
+                patientName,
+              );
+              patientCases.add(caseModel);
+            } catch (e) {
+              debugPrint("❌ Error parsing screening for $patientId: $e");
+            }
           }
+        } catch (e) {
+          debugPrint("❌ Error fetching screenings for $patientId: $e");
         }
+        
+        return patientCases;
+      });
+
+      // Wait for all patient queries to resolve simultaneously
+      final results = await Future.wait(futures);
+      
+      // Flatten the list of lists
+      for (final cases in results) {
+        allCases.addAll(cases);
       }
 
       allCases.sort((a, b) => b.date.compareTo(a.date));
       return allCases;
     } catch (e) {
-      print("❌ Error fetching AI cases: $e");
+      debugPrint("❌ Error fetching AI cases: $e");
       return [];
     }
   }
@@ -111,7 +130,7 @@ class ScreeningService {
       // HIPAA: Verify patient belongs to this doctor
       final hasAccess = await _verifyPatientOwnership(patientId);
       if (!hasAccess) {
-        print("⚠️ Access denied: Patient not assigned to this doctor");
+        debugPrint("⚠️ Access denied: Patient not assigned to this doctor");
         return false;
       }
 
@@ -128,7 +147,7 @@ class ScreeningService {
 
       return true;
     } catch (e) {
-      print("❌ Error creating screening for $patientId: $e");
+      debugPrint("❌ Error creating screening for $patientId: $e");
       return false;
     }
   }
@@ -143,7 +162,7 @@ class ScreeningService {
       // HIPAA: Verify patient belongs to this doctor
       final hasAccess = await _verifyPatientOwnership(patientId);
       if (!hasAccess) {
-        print("⚠️ Access denied: Patient not assigned to this doctor");
+        debugPrint("⚠️ Access denied: Patient not assigned to this doctor");
         return null;
       }
 
@@ -167,7 +186,7 @@ class ScreeningService {
         'requestedTest': (data['requestedTest'] ?? '') as String?,
       };
     } catch (e) {
-      print("❌ Error fetching diagnosis status for $patientId/$screeningId: $e");
+      debugPrint("❌ Error fetching diagnosis status for $patientId/$screeningId: $e");
       return null;
     }
   }

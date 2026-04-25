@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../models/diagnosis_model.dart';
@@ -30,55 +31,54 @@ class DiagnosisService {
       final screeningRef = _patientRef(patientId).doc(screeningId);
       final patientRef = _firestore.collection('patients').doc(patientId);
 
-      final batch = _firestore.batch();
-
-      // Create diagnosis entry
-      final diagnosisModel = DiagnosisModel(
-        diagnosisId: diagnosisId,
-        doctorId: doctorId,
-        status: diagnosis == 'Needs Lab Test' ? 'Needs Lab Test' : diagnosis,
-        notes: notes,
-        requestedTests: requestedTest != null ? [requestedTest] : [],
-        reviewable: diagnosis == 'Needs Lab Test',
-        verdictGiven: diagnosis != 'Needs Lab Test',
-        createdAt: DateTime.now(),
-      );
-      batch.set(diagnosisRef, diagnosisModel.toMap());
-
-      // If lab test requested
       bool labTestRequested = false;
-      if (diagnosis == 'Needs Lab Test' && requestedTest != null) {
-        final labTestId = _uuid.v4();
-        final labTestRef = screeningRef.collection('labTests').doc(labTestId);
 
-        final labTestModel = LabTestModel(
-          labTestId: labTestId,
-          testName: requestedTest,
-          fileUrl: null,
-          status: 'Pending',
-          comments: null,
-          requestedAt: DateTime.now(),
-          uploadedAt: null,
+      await _firestore.runTransaction((transaction) async {
+        // Create diagnosis entry
+        final diagnosisModel = DiagnosisModel(
+          diagnosisId: diagnosisId,
+          doctorId: doctorId,
+          status: diagnosis == 'Needs Lab Test' ? 'Needs Lab Test' : diagnosis,
+          notes: notes,
+          requestedTests: requestedTest != null ? [requestedTest] : [],
+          reviewable: diagnosis == 'Needs Lab Test',
+          verdictGiven: diagnosis != 'Needs Lab Test',
+          createdAt: DateTime.now(),
         );
-        batch.set(labTestRef, labTestModel.toMap());
-        labTestRequested = true;
-      }
+        transaction.set(diagnosisRef, diagnosisModel.toMap());
 
-      // Update screening
-      batch.update(screeningRef, {
-        'status': diagnosis == 'Needs Lab Test' ? 'Needs Lab Test' : diagnosis,
-        'finalDiagnosis': diagnosis == 'Needs Lab Test' ? null : diagnosis,
-        'doctorDiagnosis': diagnosis == 'Needs Lab Test' ? null : diagnosis, // Added as requested
-        'diagnosedBy': doctorId,
-        'doctorNotes': notes,
+        // If lab test requested
+        if (diagnosis == 'Needs Lab Test' && requestedTest != null) {
+          final labTestId = _uuid.v4();
+          final labTestRef = screeningRef.collection('labTests').doc(labTestId);
+
+          final labTestModel = LabTestModel(
+            labTestId: labTestId,
+            testName: requestedTest,
+            fileUrl: null,
+            status: 'Pending',
+            comments: null,
+            requestedAt: DateTime.now(),
+            uploadedAt: null,
+          );
+          transaction.set(labTestRef, labTestModel.toMap());
+          labTestRequested = true;
+        }
+
+        // Update screening
+        transaction.update(screeningRef, {
+          'status': diagnosis == 'Needs Lab Test' ? 'Needs Lab Test' : diagnosis,
+          'finalDiagnosis': diagnosis == 'Needs Lab Test' ? null : diagnosis,
+          'doctorDiagnosis': diagnosis == 'Needs Lab Test' ? null : diagnosis, // Added as requested
+          'diagnosedBy': doctorId,
+          'doctorNotes': notes,
+        });
+
+        // Update patient status if final
+        if (diagnosis != 'Needs Lab Test') {
+          transaction.update(patientRef, {'diagnosisStatus': diagnosis});
+        }
       });
-
-      // Update patient status if final
-      if (diagnosis != 'Needs Lab Test') {
-        batch.update(patientRef, {'diagnosisStatus': diagnosis});
-      }
-
-      await batch.commit();
 
       // 🔗 Update doctor stats
       await DoctorService.recordDiagnosis(
@@ -89,7 +89,7 @@ class DiagnosisService {
         labTestRequested: labTestRequested,
       );
     } catch (e) {
-      print('❌ Error saving diagnosis: $e');
+      debugPrint('❌ Error saving diagnosis: $e');
       rethrow;
     }
   }
@@ -106,47 +106,58 @@ class DiagnosisService {
       final diagnosisCollection =
           _patientRef(patientId).doc(screeningId).collection('diagnosis');
 
-      final diagnosisSnapshot = await diagnosisCollection
+      final screeningRef = _patientRef(patientId).doc(screeningId);
+      final patientRef = _firestore.collection('patients').doc(patientId);
+      final doctorRef = _firestore.collection('doctors').doc(doctorId);
+
+      // Query must be performed outside the transaction to get the reference
+      final querySnapshot = await diagnosisCollection
           .orderBy('createdAt', descending: true)
           .limit(1)
           .get();
 
-      if (diagnosisSnapshot.docs.isEmpty) {
+      if (querySnapshot.docs.isEmpty) {
         throw Exception('No diagnosis found to update');
       }
 
-      final diagnosisRef = diagnosisSnapshot.docs.first.reference;
-      final screeningRef = _patientRef(patientId).doc(screeningId);
-      final patientRef = _firestore.collection('patients').doc(patientId);
+      final diagnosisRef = querySnapshot.docs.first.reference;
 
-      final batch = _firestore.batch();
+      await _firestore.runTransaction((transaction) async {
+        // Read Phase: Get the document within the transaction to lock it
+        final diagnosisDoc = await transaction.get(diagnosisRef);
 
-      // Update diagnosis doc
-      batch.update(diagnosisRef, {
-        'status': status,
-        'notes': notes,
-        'verdictGiven': true,
+        if (!diagnosisDoc.exists) {
+          throw Exception('Diagnosis document no longer exists');
+        }
+
+        // Write Phase
+        // Update diagnosis doc
+        transaction.update(diagnosisRef, {
+          'status': status,
+          'notes': notes,
+          'verdictGiven': true,
+        });
+
+        // Update screening doc
+        transaction.update(screeningRef, {
+          'finalDiagnosis': status,
+          'doctorDiagnosis': status, // Added as requested
+          'status': status,
+          'doctorNotes': notes,
+        });
+
+        // Update patient
+        transaction.update(patientRef, {'diagnosisStatus': status});
+
+        // Update doctor stats: Final verdict counter
+        transaction.update(doctorRef, {
+          'totalFinalVerdicts': FieldValue.increment(1),
+        });
       });
 
-      // Update screening doc
-      batch.update(screeningRef, {
-        'finalDiagnosis': status,
-        'doctorDiagnosis': status, // Added as requested
-        'status': status,
-        'doctorNotes': notes,
-      });
-
-      // Update patient
-      batch.update(patientRef, {'diagnosisStatus': status});
-
-      await batch.commit();
-
-      // 🔗 Update doctor stats: Final verdict counter
-      await _firestore.collection('doctors').doc(doctorId).update({
-        'totalFinalVerdicts': FieldValue.increment(1),
-      });
+      // Doctor stats updated in transaction
     } catch (e) {
-      print('❌ Error updating final verdict: $e');
+      debugPrint('❌ Error updating final verdict: $e');
       rethrow;
     }
   }

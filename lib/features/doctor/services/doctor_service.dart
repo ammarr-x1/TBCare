@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -39,7 +40,7 @@ class DoctorService {
       }
       return weeklyCounts;
     } catch (e) {
-      print("❌ Error fetching weekly diagnoses: $e");
+      debugPrint("❌ Error fetching weekly diagnoses: $e");
       return {};
     }
   }
@@ -81,7 +82,7 @@ class DoctorService {
         ];
       }
     } catch (e) {
-      print("❌ Error fetching doctor stats: $e");
+      debugPrint("❌ Error fetching doctor stats: $e");
     }
     return [];
   }
@@ -100,51 +101,51 @@ class DoctorService {
     final diagnosisRef = doctorRef.collection('diagnoses').doc(diagnosisId);
 
     final now = DateTime.now();
-    final batch = _firestore.batch();
 
-    // Log every diagnosis under doctor history
-    batch.set(diagnosisRef, {
-      'diagnosisId': diagnosisId,
-      'finalDiagnosis': finalDiagnosis,
-      'patientId': patientId,
-      'screeningId': screeningId,
-      'createdAt': now,
-      'labTestRequested': labTestRequested,
+    await _firestore.runTransaction((transaction) async {
+      // We must perform all reads before any writes
+      final doctorSnap = await transaction.get(doctorRef);
+
+      // Write 1: Log every diagnosis under doctor history
+      transaction.set(diagnosisRef, {
+        'diagnosisId': diagnosisId,
+        'finalDiagnosis': finalDiagnosis,
+        'patientId': patientId,
+        'screeningId': screeningId,
+        'createdAt': now,
+        'labTestRequested': labTestRequested,
+      });
+
+      // Write 2: Increment stats atomically
+      final updates = <String, dynamic>{
+        'totalDiagnosisMade': FieldValue.increment(1),
+        'patientsReviewed': FieldValue.arrayUnion([patientId]),
+      };
+
+      if (labTestRequested) {
+        updates['totalTestsRequested'] = FieldValue.increment(1);
+      }
+
+      if (finalDiagnosis == 'TB') {
+        updates['confirmedTBCount'] = FieldValue.increment(1);
+      }
+
+      // Calculate totalPatientsReviewed safely within the transaction
+      if (doctorSnap.exists) {
+        final data = doctorSnap.data() as Map<String, dynamic>;
+        final patients = List<String>.from(data['patientsReviewed'] ?? []);
+        
+        // If patient is new to this doctor, the array length will increase by 1
+        int updatedLength = patients.length;
+        if (!patients.contains(patientId)) {
+          updatedLength += 1;
+        }
+        
+        updates['totalPatientsReviewed'] = updatedLength;
+      }
+
+      transaction.set(doctorRef, updates, SetOptions(merge: true));
     });
-
-    // Increment stats with correct Firestore field names
-    final counters = <String, Object>{
-      'totalDiagnosisMade': FieldValue.increment(1),
-      'patientsReviewed': FieldValue.arrayUnion([patientId]),
-    };
-
-    if (labTestRequested) {
-      counters['totalTestsRequested'] = FieldValue.increment(1);
-    }
-
-    if (finalDiagnosis == 'TB') {
-      counters['confirmedTBCount'] = FieldValue.increment(1);
-    }
-
-    batch.set(doctorRef, counters, SetOptions(merge: true));
-    await batch.commit();
-
-    // Update unique patient count
-    await _updateTotalPatientsReviewed();
-  }
-
-  /// ---------------- WRITE: Update patient review count ----------------
-  static Future<void> _updateTotalPatientsReviewed() async {
-    if (_doctorId == null) return;
-
-    final docRef = _firestore.collection('doctors').doc(_doctorId);
-    final docSnap = await docRef.get();
-
-    if (docSnap.exists) {
-      final data = docSnap.data() as Map<String, dynamic>;
-      final patients = List<String>.from(data['patientsReviewed'] ?? []);
-      await docRef.update({'totalPatientsReviewed': patients.length});
-    }
   }
 
   /// ---------------- WRITE: Count recommendations ----------------

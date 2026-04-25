@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/plan_item_model.dart';
@@ -32,8 +33,8 @@ class DietExerciseService {
 
     final hasAccess = await _verifyPatientOwnership(patientId);
     if (!hasAccess) {
-      print("⚠️ Access denied: Patient not assigned to this doctor");
-      return {};
+      debugPrint("⚠️ Access denied: Patient not assigned to this doctor");
+      throw Exception('Access denied: Patient not assigned to this doctor');
     }
 
     final Map<String, dynamic> plans = {};
@@ -63,6 +64,7 @@ class DietExerciseService {
         };
       }
     } catch (e) {
+      debugPrint("❌ Error fetching diet plans: $e");
       rethrow;
     }
 
@@ -76,8 +78,8 @@ class DietExerciseService {
   }) async {
     final hasAccess = await _verifyPatientOwnership(patientId);
     if (!hasAccess) {
-      print("⚠️ Access denied: Patient not assigned to this doctor");
-      return;
+      debugPrint("⚠️ Access denied: Patient not assigned to this doctor");
+      throw Exception('Access denied: Patient not assigned to this doctor');
     }
 
     final docRef = _firestore
@@ -98,8 +100,8 @@ class DietExerciseService {
   }) async {
     final hasAccess = await _verifyPatientOwnership(patientId);
     if (!hasAccess) {
-      print("⚠️ Access denied: Patient not assigned to this doctor");
-      return;
+      debugPrint("⚠️ Access denied: Patient not assigned to this doctor");
+      throw Exception('Access denied: Patient not assigned to this doctor');
     }
 
     final docRef = _firestore
@@ -119,8 +121,8 @@ class DietExerciseService {
   }) async {
     final hasAccess = await _verifyPatientOwnership(patientId);
     if (!hasAccess) {
-      print("⚠️ Access denied: Patient not assigned to this doctor");
-      return;
+      debugPrint("⚠️ Access denied: Patient not assigned to this doctor");
+      throw Exception('Access denied: Patient not assigned to this doctor');
     }
 
     await _firestore
@@ -148,8 +150,8 @@ class DietExerciseService {
       if (!doc.exists) return null;
       return doc.data();
     } catch (e) {
-      print("Error fetching diet recommendation: $e");
-      return null;
+      debugPrint("❌ Error fetching diet recommendation: $e");
+      rethrow;
     }
   }
 
@@ -174,8 +176,8 @@ class DietExerciseService {
 
     final hasAccess = await _verifyPatientOwnership(patientId);
     if (!hasAccess) {
-      print("⚠️ Access denied: Patient not assigned to this doctor");
-      return null;
+      debugPrint("⚠️ Access denied: Patient not assigned to this doctor");
+      throw Exception('Access denied: Patient not assigned to this doctor');
     }
 
     try {
@@ -202,7 +204,8 @@ class DietExerciseService {
             .toList(),
       };
     } catch (e) {
-      return null;
+      debugPrint("❌ Error fetching exercise plans: $e");
+      rethrow;
     }
   }
 
@@ -213,8 +216,8 @@ class DietExerciseService {
   }) async {
     final hasAccess = await _verifyPatientOwnership(patientId);
     if (!hasAccess) {
-      print("⚠️ Access denied: Patient not assigned to this doctor");
-      return;
+      debugPrint("⚠️ Access denied: Patient not assigned to this doctor");
+      throw Exception('Access denied: Patient not assigned to this doctor');
     }
 
     await _firestore
@@ -234,8 +237,8 @@ class DietExerciseService {
   }) async {
     final hasAccess = await _verifyPatientOwnership(patientId);
     if (!hasAccess) {
-      print("⚠️ Access denied: Patient not assigned to this doctor");
-      return;
+      debugPrint("⚠️ Access denied: Patient not assigned to this doctor");
+      throw Exception('Access denied: Patient not assigned to this doctor');
     }
 
     await _firestore
@@ -254,8 +257,8 @@ class DietExerciseService {
   }) async {
     final hasAccess = await _verifyPatientOwnership(patientId);
     if (!hasAccess) {
-      print("⚠️ Access denied: Patient not assigned to this doctor");
-      return;
+      debugPrint("⚠️ Access denied: Patient not assigned to this doctor");
+      throw Exception('Access denied: Patient not assigned to this doctor');
     }
 
     await _firestore
