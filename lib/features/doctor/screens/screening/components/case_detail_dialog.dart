@@ -107,12 +107,15 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final dialogWidth = screenWidth > 900 ? 850.0 : screenWidth * 0.9;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
       elevation: 0,
       backgroundColor: Colors.transparent,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 600), // Better width for desktop
+        constraints: BoxConstraints(maxWidth: dialogWidth),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24.0),
@@ -130,7 +133,7 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Stylish Header
+              // Header
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -140,7 +143,7 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
                       color: primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.medical_information,
                       color: primaryColor,
                       size: 28,
@@ -160,11 +163,12 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "ID: ${caseData.screeningId.substring(0, 8)}...",
+                          "ID: ${caseData.screeningId}",
                           style: TextStyle(
                             color: secondaryColor.withOpacity(0.5),
                             fontSize: 12,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -185,171 +189,30 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
               
               const SizedBox(height: 32),
 
-              // Content Grid
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left Column: Patient Info & Image
-                  Expanded(
-                    flex: 4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionHeader("Patient Information", Icons.person_outline),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50], // Very light grey bg
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.grey[200]!),
-                          ),
-                          child: Column(
-                            children: [
-                              _buildInfoRow(context, "Patient Name", caseData.patientName),
-                              const Divider(height: 24),
-                              _buildInfoRow(context, "Upload Date", caseData.date.toLocal().toString().split(' ')[0]),
-                              const Divider(height: 24),
-                              _buildStatusRow("Diagnosis Status", caseData.status),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        _buildSectionHeader("Media Evidence", Icons.image_search),
-                        const SizedBox(height: 12),
-                        _buildMediaContent(),
-                      ],
-                    ),
-                  ),
-                  
-                  const SizedBox(width: 24),
-
-                  // Right Column: AI & Symptoms
-                  Expanded(
-                    flex: 5,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionHeader("AI Analysis", Icons.psychology_outlined),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [primaryColor.withOpacity(0.05), Colors.white],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: primaryColor.withOpacity(0.1)),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text("Analysis Result", style: TextStyle(color: secondaryColor.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w600)),
-                                  Text(
-                                    caseData.aiResult ?? 'Pending',
-                                    style: TextStyle(
-                                      color: primaryColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-                        _buildSectionHeader("Reported Symptoms", Icons.sick_outlined),
-                        const SizedBox(height: 12),
-                        if (caseData.symptoms != null && caseData.symptoms!.isNotEmpty)
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: caseData.symptoms!.entries.map((entry) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.08),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: Colors.orange.withOpacity(0.2)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.warning_amber_rounded, size: 14, color: Colors.orange[700]),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      "${entry.key}: ${entry.value}",
-                                      style: TextStyle(
-                                        color: Colors.orange[800],
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          )
-                        else
-                          Text("No reported symptoms", style: TextStyle(color: secondaryColor.withOpacity(0.5), fontStyle: FontStyle.italic)),
-
-                        const SizedBox(height: 24),
-                        _buildSectionHeader("Doctor Notes", Icons.edit_note_rounded),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[200]!),
-                          ),
-                          child: isLoadingNotes
-                              ? const Center(
-                                  child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2)))
-                              : hasErrorFetchingNotes
-                                  ? Row(
-                                      children: [
-                                        Icon(Icons.error_outline, color: errorColor, size: 16),
-                                        const SizedBox(width: 8),
-                                        Text("Failed to load notes.", style: TextStyle(color: errorColor, fontSize: 14)),
-                                      ],
-                                    )
-                                  : Text(
-                                      _getDisplayNotes(),
-                                      style: TextStyle(
-                                    fontSize: 14,
-                                    height: 1.5,
-                                    color: _getDisplayNotes() != 'No notes added yet'
-                                        ? secondaryColor.withOpacity(0.8)
-                                        : secondaryColor.withOpacity(0.4),
-                                    fontStyle: _getDisplayNotes() != 'No notes added yet' ? FontStyle.normal : FontStyle.italic,
-                                  ),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              // Responsive Content
+              screenWidth > 700 
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 4, child: _buildLeftColumn(context)),
+                    const SizedBox(width: 24),
+                    Expanded(flex: 5, child: _buildRightColumn()),
+                  ],
+                )
+              : Column(
+                  children: [
+                    _buildLeftColumn(context),
+                    const SizedBox(height: 24),
+                    _buildRightColumn(),
+                  ],
+                ),
               
               const SizedBox(height: 32),
 
-              // Close Button - Sized appropriately (Right aligned)
+              // Footer
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const SizedBox(width: 16),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
@@ -372,6 +235,147 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLeftColumn(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader("Patient Information", Icons.person_outline),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Column(
+            children: [
+              _buildInfoRow(context, "Patient Name", caseData.patientName),
+              const Divider(height: 24),
+              _buildInfoRow(context, "Upload Date", caseData.date.toLocal().toString().split(' ')[0]),
+              const Divider(height: 24),
+              _buildStatusRow("Diagnosis Status", caseData.status),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        _buildSectionHeader("Media Evidence", Icons.image_search),
+        const SizedBox(height: 12),
+        _buildMediaContent(),
+      ],
+    );
+  }
+
+  Widget _buildRightColumn() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader("AI Analysis", Icons.psychology_outlined),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryColor.withOpacity(0.05), Colors.white],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: primaryColor.withOpacity(0.1)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("Analysis Result", style: TextStyle(color: secondaryColor.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  caseData.aiResult ?? 'Pending',
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        _buildSectionHeader("Reported Symptoms", Icons.sick_outlined),
+        const SizedBox(height: 12),
+        if (caseData.symptoms != null && caseData.symptoms!.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: caseData.symptoms!.entries.map((entry) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.warning_amber_rounded, size: 14, color: Colors.orange[700]),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        "${entry.key}: ${entry.value}",
+                        style: TextStyle(
+                          color: Colors.orange[800],
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          )
+        else
+          Text("No reported symptoms", style: TextStyle(color: secondaryColor.withOpacity(0.5), fontStyle: FontStyle.italic)),
+        const SizedBox(height: 24),
+        _buildSectionHeader("Doctor Notes", Icons.edit_note_rounded),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: isLoadingNotes
+              ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+              : hasErrorFetchingNotes
+                  ? Row(
+                      children: [
+                        Icon(Icons.error_outline, color: errorColor, size: 16),
+                        const SizedBox(width: 8),
+                        const Text("Failed to load notes.", style: TextStyle(color: errorColor, fontSize: 14)),
+                      ],
+                    )
+                  : Text(
+                      _getDisplayNotes(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: _getDisplayNotes() != 'No notes added yet'
+                            ? secondaryColor.withOpacity(0.8)
+                            : secondaryColor.withOpacity(0.4),
+                        fontStyle: _getDisplayNotes() != 'No notes added yet' ? FontStyle.normal : FontStyle.italic,
+                      ),
+                    ),
+        ),
+      ],
     );
   }
 
@@ -398,7 +402,15 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(color: secondaryColor.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w500)),
-        Text(value, style: TextStyle(color: secondaryColor, fontSize: 13, fontWeight: FontWeight.w600)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value, 
+            textAlign: TextAlign.end,
+            style: const TextStyle(color: secondaryColor, fontSize: 13, fontWeight: FontWeight.w600),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }
@@ -414,7 +426,7 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
         Expanded(
           child: Text(label, style: TextStyle(color: secondaryColor.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w500)),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 12),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
@@ -441,7 +453,7 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
             child: Stack(
               children: [
                 AspectRatio(
-                  aspectRatio: 16 / 9, // Proper aspect ratio
+                  aspectRatio: 16 / 9,
                   child: Image.network(
                     caseData.mediaUrl,
                     fit: BoxFit.cover,
@@ -477,8 +489,6 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
         ),
       );
     } 
-    // ... (Keep existing cough logic if needed or simplify for new UI)
-    // Simplified placeholder for cough as requested "Awful" UI usually implies Xray focus
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),

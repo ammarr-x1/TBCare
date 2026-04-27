@@ -11,11 +11,13 @@ class DoctorService {
   static String? get _doctorId => _auth.currentUser?.uid;
 
   /// ---------------- READ: Dashboard stats ----------------
+  /// ---------------- READ: Dashboard stats ----------------
   static Future<Map<int, int>> fetchWeeklyDiagnoses() async {
     if (_doctorId == null) return {};
 
     final now = DateTime.now();
-    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+    // Start of 7 days ago (to include full 7 days)
+    final sevenDaysAgo = now.subtract(const Duration(days: 6));
     final startOfPeriod = DateTime(sevenDaysAgo.year, sevenDaysAgo.month, sevenDaysAgo.day);
 
     try {
@@ -26,6 +28,8 @@ class DoctorService {
           .where('createdAt', isGreaterThanOrEqualTo: startOfPeriod)
           .get();
 
+      // We want to map results to [today-6, today-5, ..., today]
+      // 0 = today-6, 6 = today
       final Map<int, int> weeklyCounts = {
         0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0
       };
@@ -34,8 +38,11 @@ class DoctorService {
         final data = doc.data();
         if (data['createdAt'] != null) {
           final date = (data['createdAt'] as Timestamp).toDate();
-          final weekdayIndex = date.weekday - 1; 
-          weeklyCounts[weekdayIndex] = (weeklyCounts[weekdayIndex] ?? 0) + 1;
+          // Calculate difference in days from the startOfPeriod
+          final difference = date.difference(startOfPeriod).inDays;
+          if (difference >= 0 && difference < 7) {
+            weeklyCounts[difference] = (weeklyCounts[difference] ?? 0) + 1;
+          }
         }
       }
       return weeklyCounts;

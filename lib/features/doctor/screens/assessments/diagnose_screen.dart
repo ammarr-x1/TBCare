@@ -20,6 +20,7 @@ class DiagnoseScreen extends StatefulWidget {
 }
 
 class _DiagnoseScreenState extends State<DiagnoseScreen> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _testController = TextEditingController();
   String? _selectedDiagnosis;
@@ -36,17 +37,7 @@ class _DiagnoseScreenState extends State<DiagnoseScreen> {
   }
 
   Future<void> _submitDiagnosis() async {
-    if (_selectedDiagnosis == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Please select a diagnosis.")));
-      return;
-    }
-
-    if (_showTestField && _testController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please specify the lab test required.")),
-      );
+    if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
 
@@ -54,7 +45,7 @@ class _DiagnoseScreenState extends State<DiagnoseScreen> {
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Authentication error. Please sign in again."),
+          content: const Text("Authentication error. Please sign in again."),
           backgroundColor: errorColor,
         ),
       );
@@ -77,19 +68,17 @@ class _DiagnoseScreenState extends State<DiagnoseScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Diagnosis saved successfully"),
+          content: const Text("Diagnosis saved successfully"),
           backgroundColor: successColor,
         ),
       );
       Navigator.pop(context);
     } catch (e) {
-      print("Error saving diagnosis: $e");
+      debugPrint("Error saving diagnosis: $e");
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Failed to save diagnosis"),
+            content: const Text("Failed to save diagnosis"),
             backgroundColor: errorColor,
           ),
         );
@@ -104,125 +93,133 @@ class _DiagnoseScreenState extends State<DiagnoseScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: Text("Diagnose Case"),
+        title: const Text("Diagnose Case"),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(largePadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Diagnosis", 
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: secondaryColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: "Select Diagnosis",
-                labelStyle: TextStyle(color: secondaryColor.withOpacity(0.7)),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(defaultRadius),
-                  borderSide: BorderSide(color: secondaryColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(defaultRadius),
-                  borderSide: BorderSide(color: secondaryColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(defaultRadius),
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
-              ),
-              dropdownColor: Colors.white,
-              style: TextStyle(color: secondaryColor),
-              value: _selectedDiagnosis,
-              items: diagnosisOptions.map((option) {
-                return DropdownMenuItem(
-                  value: option,
-                  child: Text(option, style: TextStyle(color: secondaryColor)),
-                );
-              }).toList(),
-              onChanged: _onDiagnosisChanged,
-            ),
-            const SizedBox(height: 16),
-            if (_showTestField)
-              TextField(
-                controller: _testController,
-                style: TextStyle(color: secondaryColor),
-                decoration: InputDecoration(
-                  labelText: "Requested Test",
-                  labelStyle: TextStyle(color: secondaryColor.withOpacity(0.7)),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(defaultRadius),
-                    borderSide: BorderSide(color: secondaryColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(defaultRadius),
-                    borderSide: BorderSide(color: secondaryColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(defaultRadius),
-                    borderSide: BorderSide(color: primaryColor, width: 2),
-                  ),
-                  hintText: "e.g., Sputum, CBC, etc.",
-                  hintStyle: TextStyle(color: secondaryColor.withOpacity(0.5)),
-                ),
-              ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _notesController,
-              maxLines: 3,
-              style: TextStyle(color: secondaryColor),
-              decoration: InputDecoration(
-                labelText: "Notes (Optional)",
-                labelStyle: TextStyle(color: secondaryColor.withOpacity(0.7)),
-                hintText: "Additional comments, prescription, etc.",
-                hintStyle: TextStyle(color: secondaryColor.withOpacity(0.5)),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(defaultRadius),
-                  borderSide: BorderSide(color: secondaryColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(defaultRadius),
-                  borderSide: BorderSide(color: secondaryColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(defaultRadius),
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton.icon(
-                onPressed: _isLoading ? null : _submitDiagnosis,
-                icon: Icon(Icons.save),
-                label: Text("Submit Diagnosis"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(defaultRadius),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(largePadding),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Diagnosis", 
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: secondaryColor,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Select Diagnosis",
+                    labelStyle: TextStyle(color: secondaryColor.withOpacity(0.7)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(defaultRadius),
+                      borderSide: const BorderSide(color: secondaryColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(defaultRadius),
+                      borderSide: const BorderSide(color: secondaryColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(defaultRadius),
+                      borderSide: const BorderSide(color: primaryColor, width: 2),
+                    ),
+                  ),
+                  dropdownColor: Colors.white,
+                  style: const TextStyle(color: secondaryColor),
+                  value: _selectedDiagnosis,
+                  validator: (value) => value == null ? "Please select a diagnosis" : null,
+                  items: diagnosisOptions.map((option) {
+                    return DropdownMenuItem(
+                      value: option,
+                      child: Text(option, style: const TextStyle(color: secondaryColor)),
+                    );
+                  }).toList(),
+                  onChanged: _onDiagnosisChanged,
+                ),
+                const SizedBox(height: 16),
+                if (_showTestField) ...[
+                  TextFormField(
+                    controller: _testController,
+                    style: const TextStyle(color: secondaryColor),
+                    validator: (value) => _showTestField && (value == null || value.trim().isEmpty) ? "Please specify the lab test required" : null,
+                    decoration: InputDecoration(
+                      labelText: "Requested Test",
+                      labelStyle: TextStyle(color: secondaryColor.withOpacity(0.7)),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(defaultRadius),
+                        borderSide: const BorderSide(color: secondaryColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(defaultRadius),
+                        borderSide: const BorderSide(color: secondaryColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(defaultRadius),
+                        borderSide: const BorderSide(color: primaryColor, width: 2),
+                      ),
+                      hintText: "e.g., Sputum, CBC, etc.",
+                      hintStyle: TextStyle(color: secondaryColor.withOpacity(0.5)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                TextFormField(
+                  controller: _notesController,
+                  maxLines: 3,
+                  style: const TextStyle(color: secondaryColor),
+                  decoration: InputDecoration(
+                    labelText: "Notes (Optional)",
+                    labelStyle: TextStyle(color: secondaryColor.withOpacity(0.7)),
+                    hintText: "Additional comments, prescription, etc.",
+                    hintStyle: TextStyle(color: secondaryColor.withOpacity(0.5)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(defaultRadius),
+                      borderSide: const BorderSide(color: secondaryColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(defaultRadius),
+                      borderSide: const BorderSide(color: secondaryColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(defaultRadius),
+                      borderSide: const BorderSide(color: primaryColor, width: 2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _submitDiagnosis,
+                    icon: const Icon(Icons.save),
+                    label: const Text("Submit Diagnosis"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(defaultRadius),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
-}
+}

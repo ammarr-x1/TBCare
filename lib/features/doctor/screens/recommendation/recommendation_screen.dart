@@ -14,6 +14,19 @@ class RecommendationScreen extends StatefulWidget {
 class _RecommendationScreenState extends State<RecommendationScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  late Future<List<PatientModel>> _tbPatientsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshData();
+  }
+
+  void _refreshData() {
+    setState(() {
+      _tbPatientsFuture = PatientService.fetchDeepTBPatients();
+    });
+  }
 
   @override
   void dispose() {
@@ -48,9 +61,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               ),
               child: const Icon(Icons.refresh, size: 20, color: Colors.white),
             ),
-            onPressed: () {
-              setState(() {});
-            },
+            onPressed: _refreshData,
             tooltip: 'Refresh',
           ),
           const SizedBox(width: 16),
@@ -78,8 +89,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 ),
               ],
             ),
-            child: StreamBuilder<List<PatientModel>>(
-              stream: PatientService.fetchTBPatientsStream(),
+            child: FutureBuilder<List<PatientModel>>(
+              future: _tbPatientsFuture,
               builder: (context, snapshot) {
                 final count = snapshot.hasData ? snapshot.data!.length : 0;
                 final isLoading = snapshot.connectionState == ConnectionState.waiting;
@@ -104,7 +115,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Total TB Patients',
+                            'Confirmed TB Cases',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.9),
                               fontSize: 14,
@@ -190,8 +201,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
           // Patient List
           Expanded(
-            child: StreamBuilder<List<PatientModel>>(
-              stream: PatientService.fetchTBPatientsStream(),
+            child: FutureBuilder<List<PatientModel>>(
+              future: _tbPatientsFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -265,4 +276,4 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       ),
     );
   }
-}
+}

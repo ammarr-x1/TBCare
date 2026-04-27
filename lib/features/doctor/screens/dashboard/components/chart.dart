@@ -84,12 +84,20 @@ class Chart extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (double value, TitleMeta meta) {
-                        const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                        if (value.toInt() >= 0 && value.toInt() < days.length) {
+                        final now = DateTime.now();
+                        final date = now.subtract(Duration(days: 6 - value.toInt()));
+                        const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // Sunday starts at index 0 in some conventions, but DateTime.weekday uses 1-7
+                        
+                        // DateTime.weekday: 1 = Monday, 7 = Sunday
+                        final weekday = date.weekday;
+                        final dayLabels = ['', 'M', 'T', 'W', 'T', 'F', 'S', 'S'];
+                        final label = dayLabels[weekday];
+
+                        if (value.toInt() >= 0 && value.toInt() < 7) {
                           return Padding(
                             padding: const EdgeInsets.only(top: 8.0),
                             child: Text(
-                              days[value.toInt()],
+                              label,
                               style: const TextStyle(
                                 color: Colors.black87,
                                 fontWeight: FontWeight.w500,

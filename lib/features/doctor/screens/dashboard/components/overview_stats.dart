@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tbcare_main/core/app_constants.dart';
 import 'package:tbcare_main/features/doctor/models/doctor_stats.dart';
@@ -15,14 +16,25 @@ class _OverviewStatsState extends State<OverviewStats> {
   List<DoctorStat> stats = [];
   bool isLoading = true;
 
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
     _loadStats();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
+      _loadStats(silent: true);
+    });
   }
 
-  Future<void> _loadStats() async {
-    setState(() => isLoading = true);
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadStats({bool silent = false}) async {
+    if (!silent) setState(() => isLoading = true);
     final fetchedStats = await DoctorService.fetchDoctorStats();
     if (mounted) {
       setState(() {

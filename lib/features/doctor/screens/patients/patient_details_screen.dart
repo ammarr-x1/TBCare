@@ -55,279 +55,475 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Responsive horizontal padding for web dashboard
+    final double horizontalMargin = screenWidth > 900 ? screenWidth * 0.15 : 0;
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
         title: Text(
-          "Screenings - ${widget.patient.name}",
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+          "Patient Profile",
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh, color: Colors.white),
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.refresh, size: 20, color: Colors.white),
+            ),
             onPressed: _loadScreenings,
-            padding: EdgeInsets.fromLTRB(0, 0, defaultPadding, 0),
           ),
+          const SizedBox(width: 16),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(25,defaultPadding,25,defaultPadding),
-        child: isLoading
-            ? Center(child: CircularProgressIndicator(color: primaryColor))
-            : errorMessage != null
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, size: 48, color: errorColor),
-                    const SizedBox(height: 16),
-                    Text(
-                      errorMessage!,
-                      style: const TextStyle(color: errorColor, fontSize: 16),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: primaryColor))
+          : errorMessage != null
+              ? _buildErrorState()
+              : Center(
+                  child: Container(
+                    constraints: BoxConstraints(maxWidth: screenWidth > 900 ? 1200 : double.infinity),
+                    margin: EdgeInsets.symmetric(horizontal: horizontalMargin),
+                    child: CustomScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      slivers: [
+                        // Patient Identity Header
+                        SliverToBoxAdapter(child: _buildPatientHeader()),
+
+                        // Screening History Section
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          sliver: SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 24, bottom: 16),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 4,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: primaryColor,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    "Screening History",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: secondaryColor,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    "${screenings.length} Records",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: secondaryColor.withOpacity(0.5),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        screenings.isEmpty
+                            ? SliverFillRemaining(child: _buildEmptyState())
+                            : SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                                sliver: SliverList(
+                                  delegate: SliverChildBuilderDelegate(
+                                    (context, index) => _buildScreeningCard(screenings[index]),
+                                    childCount: screenings.length,
+                                  ),
+                                ),
+                              ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _loadScreenings,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
-                      style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white),
+                  ),
+                ),
+    );
+  }
+
+  Widget _buildPatientHeader() {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: primaryColor,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Avatar
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 4),
+                  image: widget.patient.photoUrl.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(widget.patient.photoUrl),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: widget.patient.photoUrl.isEmpty
+                    ? const Icon(Icons.person, size: 40, color: primaryColor)
+                    : null,
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.patient.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        _buildBadge(
+                          icon: Icons.cake_outlined,
+                          text: "${widget.patient.age} Yrs",
+                        ),
+                        const SizedBox(width: 8),
+                        _buildBadge(
+                          icon: widget.patient.gender.toLowerCase() == 'male' 
+                              ? Icons.male 
+                              : Icons.female,
+                          text: widget.patient.gender,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              )
-            : screenings.isEmpty
-            ? Center(
-                child: Text(
-                  "No screenings found",
-                  style: TextStyle(
-                    color: secondaryColor.withOpacity(0.7),
-                    fontSize: bodySize,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Status Strip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.shield_outlined, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                const Text(
+                  "Health Status:",
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(widget.patient.diagnosisStatus),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    widget.patient.diagnosisStatus.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
-              )
-            : ListView.separated(
-                itemCount: screenings.length,
-                separatorBuilder: (_, __) => SizedBox(height: defaultPadding),
-                itemBuilder: (context, index) {
-                  final screening = screenings[index];
-                  return _buildScreeningCard(screening);
-                },
-              ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    if (status == 'TB') return errorColor;
+    if (status == 'Not TB') return successColor;
+    return accentColor;
+  }
+
+  Widget _buildBadge({required IconData icon, required String text}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white70),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildScreeningCard(ScreeningModel screening) {
-    String displayStatus = "Pending";
-    bool isDiagnosed = false;
-
-    if (screening.finalDiagnosis != null && screening.finalDiagnosis!.isNotEmpty) {
-      displayStatus = screening.finalDiagnosis!;
-      isDiagnosed = true;
-    }
-
-    // Colors
-    final statusColor = isDiagnosed 
-        ? (displayStatus.toLowerCase().contains("tb") && !displayStatus.toLowerCase().contains("not") ? errorColor : successColor) 
-        : warningColor;
+    final bool isFinal = screening.finalDiagnosis != null && screening.finalDiagnosis!.isNotEmpty;
+    final String statusText = isFinal ? screening.finalDiagnosis! : "Pending Review";
+    final Color statusColor = _getStatusColor(statusText);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // Header Section
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.08),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.calendar_today_rounded, color: statusColor, size: 20),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Column(
+          children: [
+            // Card Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.05),
+                border: Border(bottom: BorderSide(color: statusColor.withOpacity(0.1))),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: statusColor.withOpacity(0.1),
+                          blurRadius: 10,
+                        )
+                      ],
                     ),
-                    const SizedBox(width: 15),
-                    Column(
+                    child: Icon(Icons.event_note, color: statusColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           screening.date.toLocal().toString().split(' ')[0],
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
                             color: secondaryColor,
+                            fontSize: 15,
                           ),
                         ),
                         Text(
-                          "Screening Date",
+                          "Assessment Date",
                           style: TextStyle(
                             color: secondaryColor.withOpacity(0.5),
-                            fontSize: 12,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: statusColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  ),
-                  child: Text(
-                    displayStatus,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Symptoms
-                if (screening.symptoms.entries.where((e) => e.value == true).isNotEmpty) ...[
-                  Text(
-                    "REPORTED SYMPTOMS",
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: screening.symptoms.entries
-                        .where((e) => e.value == true)
-                        .map((e) => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: bgColor,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: secondaryColor.withOpacity(0.05)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.check_circle_outline, size: 16, color: primaryColor.withOpacity(0.6)),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    e.key,
-                                    style: TextStyle(
-                                      color: secondaryColor.withOpacity(0.8),
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ))
-                        .toList(),
-                  ),
-                  const SizedBox(height: 24),
-                  Divider(color: secondaryColor.withOpacity(0.05)),
-                  const SizedBox(height: 24),
                 ],
+              ),
+            ),
 
-                // AI Analysis
-                Text(
-                  "AI ANALYSIS",
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [primaryColor.withOpacity(0.05), Colors.white],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Symptoms Chip Group
+                  if (screening.symptoms.entries.where((e) => e.value == true).isNotEmpty) ...[
+                    _buildSectionTitle("PATIENT SYMPTOMS"),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: screening.symptoms.entries
+                          .where((e) => e.value == true)
+                          .map((e) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: bgColor,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: primaryColor.withOpacity(0.1)),
+                                ),
+                                child: Text(
+                                  e.key,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: secondaryColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ))
+                          .toList(),
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: primaryColor.withOpacity(0.1)),
-                  ),
-                  child: Column(
-                    children: screening.aiPrediction.entries.map((e) {
-                      final key = e.key;
-                      final value = e.value;
-                      
-                      String displayValue = value.toString();
-                      if (key == 'confidence' && value is num) {
-                        displayValue = "${(value * 100).toStringAsFixed(1)}%";
-                      }
+                    const SizedBox(height: 24),
+                  ],
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              key.capitalize(),
-                              style: TextStyle(
-                                color: secondaryColor.withOpacity(0.6),
-                                fontWeight: FontWeight.w500,
+                  // AI Analysis Section
+                  _buildSectionTitle("AI CLINICAL ANALYSIS"),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: bgColor.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.black.withOpacity(0.03)),
+                    ),
+                    child: Column(
+                      children: screening.aiPrediction.entries.map((e) {
+                        final isConfidence = e.key.toLowerCase() == 'confidence';
+                        final val = isConfidence 
+                            ? "${((e.value as num) * 100).toStringAsFixed(1)}%"
+                            : e.value.toString();
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                e.key.capitalize(),
+                                style: TextStyle(
+                                  color: secondaryColor.withOpacity(0.5),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                            ),
-                            Text(
-                              displayValue,
-                              style: const TextStyle(
-                                color: secondaryColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                              Text(
+                                val,
+                                style: TextStyle(
+                                  color: isConfidence ? primaryColor : secondaryColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        color: secondaryColor.withOpacity(0.4),
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1.2,
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: errorColor.withOpacity(0.3)),
+          const SizedBox(height: 16),
+          Text(
+            errorMessage!,
+            style: const TextStyle(color: secondaryColor, fontSize: 16),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _loadScreenings,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text("Try Again", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.folder_open_rounded, size: 80, color: secondaryColor.withOpacity(0.1)),
+          const SizedBox(height: 16),
+          Text(
+            "No screening records found",
+            style: TextStyle(
+              color: secondaryColor.withOpacity(0.4),
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],

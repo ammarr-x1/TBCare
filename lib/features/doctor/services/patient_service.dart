@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import '../models/patient_model.dart';
 
 class PatientService {
@@ -111,6 +112,61 @@ class PatientService {
     } catch (e) {
       print("❌ Error fetching latest screening for $patientId: $e");
       rethrow;
+    }
+  }
+
+  /// Fetch patients with 'TB' status using deep nested clinical history check
+  static Future<List<PatientModel>> fetchDeepTBPatients() async {
+    try {
+      final patients = await fetchAllPatients();
+      
+      final List<Future<PatientModel?>> tbFilterFutures = patients.map((p) async {
+        try {
+          // 1. Get latest screening
+          final screeningSnapshot = await _firestore
+              .collection('patients')
+              .doc(p.uid)
+              .collection('screenings')
+              .orderBy('timestamp', descending: true)
+              .limit(1)
+              .get();
+
+          if (screeningSnapshot.docs.isEmpty) return null;
+          final screeningId = screeningSnapshot.docs.first.id;
+
+          // 2. Get latest diagnosis for that screening
+          final diagnosisSnapshot = await _firestore
+              .collection('patients')
+              .doc(p.uid)
+              .collection('screenings')
+              .doc(screeningId)
+              .collection('diagnosis')
+              .orderBy('createdAt', descending: true)
+              .limit(1)
+              .get();
+
+          String? status;
+          if (diagnosisSnapshot.docs.isEmpty) {
+            status = screeningSnapshot.docs.first.data()['status']?.toString();
+          } else {
+            status = diagnosisSnapshot.docs.first.data()['status']?.toString();
+          }
+
+          if (status == 'TB') {
+            return p;
+          }
+          return null;
+        } catch (e) {
+          debugPrint("Error filtering TB status for patient ${p.uid}: $e");
+          return null;
+        }
+      }).toList();
+
+      final results = await Future.wait(tbFilterFutures);
+      return results.whereType<PatientModel>().toList();
+    } catch (e) {
+      debugPrint("❌ Error in fetchDeepTBPatients: $e");
+      return [];
     }
   }
 }

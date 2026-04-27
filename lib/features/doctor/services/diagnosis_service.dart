@@ -67,17 +67,15 @@ class DiagnosisService {
 
         // Update screening
         transaction.update(screeningRef, {
-          'status': diagnosis == 'Needs Lab Test' ? 'Needs Lab Test' : diagnosis,
+          'status': diagnosis,
           'finalDiagnosis': diagnosis == 'Needs Lab Test' ? null : diagnosis,
-          'doctorDiagnosis': diagnosis == 'Needs Lab Test' ? null : diagnosis, // Added as requested
+          'doctorDiagnosis': diagnosis == 'Needs Lab Test' ? null : diagnosis,
           'diagnosedBy': doctorId,
           'doctorNotes': notes,
         });
 
-        // Update patient status if final
-        if (diagnosis != 'Needs Lab Test') {
-          transaction.update(patientRef, {'diagnosisStatus': diagnosis});
-        }
+        // Update patient status consistently across all levels
+        transaction.update(patientRef, {'diagnosisStatus': diagnosis});
       });
 
       // 🔗 Update doctor stats

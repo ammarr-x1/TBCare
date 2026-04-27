@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:tbcare_main/core/app_constants.dart';
@@ -15,15 +16,26 @@ class _RecentActivityState extends State<RecentActivity> {
   List<RecentCase> _recentCases = [];
   bool _isLoading = true;
   String? _error;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchRecentCases();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
+      _fetchRecentCases(silent: true);
+    });
   }
 
-  Future<void> _fetchRecentCases() async {
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchRecentCases({bool silent = false}) async {
     try {
+      if (!silent) setState(() => _isLoading = true);
       final cases = await RecentCasesService.fetchRecentCases(limit: 5);
       if (mounted) {
         setState(() {

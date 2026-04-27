@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:tbcare_main/core/app_constants.dart';
@@ -17,34 +19,86 @@ class _StorageDetailsState extends State<StorageDetails> {
   bool isLoading = true;
   Map<int, int> weeklyDiagnoses = {};
   Map<String, int> patientStatusCounts = {};
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    // Start auto-refresh timer
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
+      _loadData(silent: true);
+    });
   }
 
-  Future<void> _loadData() async {
-    setState(() => isLoading = true);
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) setState(() => isLoading = true);
     
-    // Fetch parallel data
     try {
       final weekly = await DoctorService.fetchWeeklyDiagnoses();
-      final patients = await PatientService.fetchAllPatients(); // This is just a fetch, not stream
+      final patients = await PatientService.fetchAllPatients();
 
-      // Process patient stats
+      // Process patient stats as per user request:
+      // Deep dive into latest screening -> latest diagnosis status
       final stats = <String, int>{
         'TB': 0,
         'Not TB': 0,
-        'TB Likely': 0,
         'Other': 0,
       };
 
-      for (var p in patients) {
-        final status = p.diagnosisStatus;
-        if (stats.containsKey(status)) {
-          stats[status] = (stats[status] ?? 0) + 1;
+      // Parallelize the fetching of nested statuses for each patient
+      final List<Future<String?>> statusFutures = patients.map((p) async {
+        try {
+          // 1. Get latest screening
+          final screeningSnapshot = await FirebaseFirestore.instance
+              .collection('patients')
+              .doc(p.uid)
+              .collection('screenings')
+              .orderBy('timestamp', descending: true)
+              .limit(1)
+              .get();
+
+          if (screeningSnapshot.docs.isEmpty) return null;
+          final screeningId = screeningSnapshot.docs.first.id;
+
+          // 2. Get latest diagnosis for that screening
+          final diagnosisSnapshot = await FirebaseFirestore.instance
+              .collection('patients')
+              .doc(p.uid)
+              .collection('screenings')
+              .doc(screeningId)
+              .collection('diagnosis')
+              .orderBy('createdAt', descending: true)
+              .limit(1)
+              .get();
+
+          if (diagnosisSnapshot.docs.isEmpty) {
+            // If no diagnosis doc yet, fallback to screening's top-level status if it exists
+            return screeningSnapshot.docs.first.data()['status']?.toString();
+          }
+          
+          return diagnosisSnapshot.docs.first.data()['status']?.toString();
+        } catch (e) {
+          debugPrint("Error fetching deep status for patient ${p.uid}: $e");
+          return null;
+        }
+      }).toList();
+
+      final List<String?> nestedStatuses = await Future.wait(statusFutures);
+
+      for (var status in nestedStatuses) {
+        if (status == 'TB') {
+          stats['TB'] = (stats['TB'] ?? 0) + 1;
+        } else if (status == 'Not TB') {
+          stats['Not TB'] = (stats['Not TB'] ?? 0) + 1;
         } else {
+          // This includes 'Needs Lab Test', 'TB Likely', null, etc.
           stats['Other'] = (stats['Other'] ?? 0) + 1;
         }
       }
@@ -90,7 +144,7 @@ class _StorageDetailsState extends State<StorageDetails> {
               
               // Patient Status Pie Chart
               Text(
-                "Patient Status",
+                "Patient Statistics",
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -131,7 +185,6 @@ class _StorageDetailsState extends State<StorageDetails> {
   }
 
   List<PieChartSectionData> _buildPieSections() {
-    // If no data, show a placeholder grey ring
     final total = patientStatusCounts.values.fold(0, (a, b) => a + b);
     if (total == 0) {
       return [
@@ -147,23 +200,15 @@ class _StorageDetailsState extends State<StorageDetails> {
     return [
       if ((patientStatusCounts['TB'] ?? 0) > 0)
         PieChartSectionData(
-          color: errorColor,
+          color: errorColor, // Red
           value: (patientStatusCounts['TB'] ?? 0).toDouble(),
           title: "${patientStatusCounts['TB']}",
           radius: 25,
           titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
         ),
-      if ((patientStatusCounts['TB Likely'] ?? 0) > 0)
-        PieChartSectionData(
-          color: warningColor,
-          value: (patientStatusCounts['TB Likely'] ?? 0).toDouble(),
-          title: "${patientStatusCounts['TB Likely']}",
-          radius: 25,
-          titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-        ),
       if ((patientStatusCounts['Not TB'] ?? 0) > 0)
         PieChartSectionData(
-          color: successColor,
+          color: successColor, // Green
           value: (patientStatusCounts['Not TB'] ?? 0).toDouble(),
           title: "${patientStatusCounts['Not TB']}",
           radius: 25,
@@ -171,7 +216,7 @@ class _StorageDetailsState extends State<StorageDetails> {
         ),
       if ((patientStatusCounts['Other'] ?? 0) > 0)
         PieChartSectionData(
-          color: accentColor,
+          color: accentColor, // Blue
           value: (patientStatusCounts['Other'] ?? 0).toDouble(),
           title: "${patientStatusCounts['Other']}",
           radius: 25,
@@ -184,9 +229,8 @@ class _StorageDetailsState extends State<StorageDetails> {
     return Column(
       children: [
         _legendItem(color: errorColor, text: "Confirmed TB"),
-        _legendItem(color: warningColor, text: "TB Likely"),
         _legendItem(color: successColor, text: "Not TB"),
-        _legendItem(color: accentColor, text: "Other/Pending"),
+        _legendItem(color: accentColor, text: "Other Cases"),
       ],
     );
   }
