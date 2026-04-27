@@ -93,97 +93,126 @@ class _RecommendationDetailScreenState
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(defaultPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AddRecommendationForm(
-              medicalController: _medicalController,
-              lifestyleController: _lifestyleController,
-              isSubmitting: isSubmitting,
-              onSubmit: _submitRecommendation,
-            ),
-            const SizedBox(height: defaultPadding),
-
-            // ✅ Fetch latest screening and show recs
-            Expanded(
-              child: FutureBuilder<String?>(
-                future: RecommendationService.fetchLatestScreeningId(
-                  widget.patient.uid,
-                ),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Padding(
+              padding: const EdgeInsets.all(defaultPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AddRecommendationForm(
+                    medicalController: _medicalController,
+                    lifestyleController: _lifestyleController,
+                    isSubmitting: isSubmitting,
+                    onSubmit: _submitRecommendation,
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      Text(
+                        "Recommendation History",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: secondaryColor.withOpacity(0.8),
+                        ),
                       ),
-                    );
-                  }
-                  if (snapshot.hasError) {
-                    return const EmptyStateWidget(
-                      icon: Icons.error_outline,
-                      title: "Error loading data",
-                      subtitle: "Failed to fetch screenings",
-                    );
-                  }
-                  if (!snapshot.hasData || snapshot.data == null) {
-                    return const EmptyStateWidget(
-                      icon: Icons.assessment_outlined,
-                      title: "No screenings found",
-                      subtitle: "Complete a screening first",
-                    );
-                  }
+                      const SizedBox(width: 8),
+                      Expanded(child: Divider(color: Colors.grey[200])),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
 
-                  final screeningId = snapshot.data!;
-
-                  return StreamBuilder<List<RecommendationModel>>(
-                    stream: RecommendationService.fetchRecommendations(
+                  // ✅ Fetch latest screening and show recs
+                  FutureBuilder<String?>(
+                    future: RecommendationService.fetchLatestScreeningId(
                       widget.patient.uid,
-                      screeningId,
                     ),
-                    builder: (context, recSnapshot) {
-                      if (recSnapshot.connectionState ==
-                          ConnectionState.waiting) {
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                          child: Padding(
+                            padding: EdgeInsets.all(32.0),
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                            ),
                           ),
                         );
                       }
-                      if (recSnapshot.hasError) {
+                      if (snapshot.hasError) {
                         return const EmptyStateWidget(
                           icon: Icons.error_outline,
                           title: "Error loading data",
-                          subtitle: "Failed to fetch recommendations",
+                          subtitle: "Failed to fetch screenings",
                         );
                       }
-                      if (!recSnapshot.hasData || recSnapshot.data!.isEmpty) {
+                      if (!snapshot.hasData || snapshot.data == null) {
                         return const EmptyStateWidget(
-                          icon: Icons.recommend_outlined,
-                          title: "No recommendations yet",
-                          subtitle: "Add your first recommendation above",
+                          icon: Icons.assessment_outlined,
+                          title: "No screenings found",
+                          subtitle: "Complete a screening first",
                         );
                       }
 
-                      final recs = recSnapshot.data!;
+                      final screeningId = snapshot.data!;
 
-                      return ListView.separated(
-                        itemCount: recs.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final rec = recs[index];
-                          return RecommendationListItem(
-                            recommendation: rec,
+                      return StreamBuilder<List<RecommendationModel>>(
+                        stream: RecommendationService.fetchRecommendations(
+                          widget.patient.uid,
+                          screeningId,
+                        ),
+                        builder: (context, recSnapshot) {
+                          if (recSnapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32.0),
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                                ),
+                              ),
+                            );
+                          }
+                          if (recSnapshot.hasError) {
+                            return const EmptyStateWidget(
+                              icon: Icons.error_outline,
+                              title: "Error loading data",
+                              subtitle: "Failed to fetch recommendations",
+                            );
+                          }
+                          if (!recSnapshot.hasData || recSnapshot.data!.isEmpty) {
+                            return const EmptyStateWidget(
+                              icon: Icons.recommend_outlined,
+                              title: "No recommendations yet",
+                              subtitle: "Add your first recommendation above",
+                            );
+                          }
+
+                          final recs = recSnapshot.data!;
+
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: recs.length,
+                            itemBuilder: (context, index) {
+                              final rec = recs[index];
+                              return RecommendationListItem(
+                                recommendation: rec,
+                              );
+                            },
                           );
                         },
                       );
                     },
-                  );
-                },
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

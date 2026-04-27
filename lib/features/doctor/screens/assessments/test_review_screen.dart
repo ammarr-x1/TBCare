@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:tbcare_main/core/app_constants.dart';
 import 'package:tbcare_main/features/doctor/models/ai_case_model.dart';
 import 'package:tbcare_main/features/doctor/models/lab_test_model.dart';
@@ -97,6 +98,64 @@ class _TestReviewScreenState extends State<TestReviewScreen> {
     }
   }
 
+  void _viewTest(LabTestModel test) async {
+    if (test.fileUrl == null) return;
+    
+    final url = test.fileUrl!;
+    final isPdf = url.toLowerCase().contains('.pdf');
+
+    if (isPdf) {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Could not open PDF")),
+          );
+        }
+      }
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                padding: const EdgeInsets.all(8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: InteractiveViewer(
+                    child: Image.network(
+                      url,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.black54),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -155,7 +214,7 @@ class _TestReviewScreenState extends State<TestReviewScreen> {
                         ),
                       )
                     else
-                      ...labTests.map(
+                      ...((labTests).map(
                         (test) => Card(
                           color: Colors.white,
                           elevation: 2,
@@ -209,14 +268,12 @@ class _TestReviewScreenState extends State<TestReviewScreen> {
                               ),
                             ),
                             trailing: IconButton(
-                              icon: Icon(Icons.download, color: primaryColor),
-                              onPressed: () {
-                                // Optional: open PDF/image preview if implemented
-                              },
+                              icon: Icon(Icons.visibility, color: primaryColor),
+                              onPressed: () => _viewTest(test),
                             ),
                           ),
                         ),
-                      ),
+                      ).toList()),
                     const SizedBox(height: 32),
                     Container(
                       padding: const EdgeInsets.all(24),
@@ -355,9 +412,11 @@ class _TestReviewScreenState extends State<TestReviewScreen> {
     );
   }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(String? status) {
+    if (status == null) return accentColor;
     switch (status.toLowerCase()) {
       case 'completed':
+      case 'uploaded':
       case 'normal':
         return successColor;
       case 'pending':

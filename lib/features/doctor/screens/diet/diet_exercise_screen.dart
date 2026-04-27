@@ -41,22 +41,38 @@ class _DietExerciseScreenState extends State<DietExerciseScreen> {
 
       final List<PatientModel> confirmedTbPatients = [];
 
-      // 2. Check each patient's screenings for "finalDiagnosis == 'TB'"
+      // 2. Check each patient's LATEST screening for diagnosis status "TB"
       // doing this concurrently for performance
       await Future.wait(patientsSnapshot.docs.map((doc) async {
         final patientData = doc.data();
         final patientId = doc.id;
 
-        // Check screenings subcollection
+        // Step A: Fetch the LATEST screening (by timestamp)
         final screeningSnapshot = await doc.reference
             .collection('screenings')
-            .where('finalDiagnosis', isEqualTo: 'TB')
+            .orderBy('timestamp', descending: true)
             .limit(1)
             .get();
 
         if (screeningSnapshot.docs.isNotEmpty) {
-          patientData['uid'] = patientId;
-          confirmedTbPatients.add(PatientModel.fromMap(patientData));
+          final latestScreeningDoc = screeningSnapshot.docs.first;
+          
+          // Step B: Fetch the LATEST diagnosis for this screening (by createdAt)
+          final diagnosisSnapshot = await latestScreeningDoc.reference
+              .collection('diagnosis')
+              .orderBy('createdAt', descending: true)
+              .limit(1)
+              .get();
+
+          if (diagnosisSnapshot.docs.isNotEmpty) {
+            final diagnosisData = diagnosisSnapshot.docs.first.data();
+            
+            // Step C: Only add patient if latest diagnosis status is "TB"
+            if (diagnosisData['status'] == 'TB') {
+              patientData['uid'] = patientId;
+              confirmedTbPatients.add(PatientModel.fromMap(patientData));
+            }
+          }
         }
       }));
 
@@ -104,10 +120,10 @@ class _DietExerciseScreenState extends State<DietExerciseScreen> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
+                color: Colors.white.withOpacity(0.2), // Semi-transparent white
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.refresh_rounded, color: primaryColor, size: 20),
+              child: const Icon(Icons.refresh, size: 20, color: Colors.white),
             ),
             tooltip: "Refresh List",
           ),
