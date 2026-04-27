@@ -39,8 +39,12 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       );
       
       if (aiData != null) {
-        _aiPlan = DietRecommendationModel.fromMap(aiData);
-        setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() {
+            _aiPlan = DietRecommendationModel.fromMap(aiData);
+            _isLoading = false;
+          });
+        }
         return;
       }
 
@@ -51,9 +55,11 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       _legacyPlans = plans;
     } catch (e) {
       debugPrint("Error loading diet data: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading data: $e"), backgroundColor: errorColor),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error loading data: $e"), backgroundColor: errorColor),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -65,6 +71,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
     try {
       await DietExerciseService.approveDietRecommendation(widget.patient.uid);
       
+      if (!mounted) return;
       // Update local state
       if (_aiPlan != null) {
         setState(() {
@@ -89,9 +96,11 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
         SnackBar(content: const Text("Diet Plan Approved Successfully"), backgroundColor: successColor),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to approve: $e"), backgroundColor: errorColor),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to approve: $e"), backgroundColor: errorColor),
+        );
+      }
     }
   }
 
@@ -113,17 +122,23 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
         planDocId: docId,
         item: newItem,
       );
+      
+      if (!mounted) return;
       _nameControllers[timeOfDay]?.clear();
       _quantityControllers[timeOfDay]?.clear();
       
       // Reload legacy plans
       final plans = await DietExerciseService.fetchAllDietPlans(widget.patient.uid);
-      setState(() => _legacyPlans = plans);
+      if (mounted) {
+        setState(() => _legacyPlans = plans);
+      }
       
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to add item: $e"), backgroundColor: errorColor),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to add item: $e"), backgroundColor: errorColor),
+        );
+      }
     }
   }
 
@@ -136,11 +151,15 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
         item: item,
       );
       final plans = await DietExerciseService.fetchAllDietPlans(widget.patient.uid);
-      setState(() => _legacyPlans = plans);
+      if (mounted) {
+        setState(() => _legacyPlans = plans);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to delete item: $e"), backgroundColor: errorColor),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to delete item: $e"), backgroundColor: errorColor),
+        );
+      }
     }
   }
 
@@ -152,14 +171,18 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
         planDocId: docId,
       );
       final plans = await DietExerciseService.fetchAllDietPlans(widget.patient.uid);
-      setState(() => _legacyPlans = plans);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text("Plan approved."), backgroundColor: successColor),
-      );
+      if (mounted) {
+        setState(() => _legacyPlans = plans);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: const Text("Plan approved."), backgroundColor: successColor),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to approve plan: $e"), backgroundColor: errorColor),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to approve plan: $e"), backgroundColor: errorColor),
+        );
+      }
     }
   }
 

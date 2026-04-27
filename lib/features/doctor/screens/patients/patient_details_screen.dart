@@ -18,6 +18,7 @@ class PatientDetailScreen extends StatefulWidget {
 class _PatientDetailScreenState extends State<PatientDetailScreen> {
   List<ScreeningModel> screenings = [];
   bool isLoading = true;
+  String? errorMessage;
 
   @override
   void initState() {
@@ -26,17 +27,29 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 
   Future<void> _loadScreenings() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
     try {
       final data = await ScreeningService.fetchScreeningsForPatient(
         widget.patient.uid,
       );
+      if (!mounted) return;
       setState(() {
         screenings = data;
         isLoading = false;
       });
     } catch (e) {
-      print("Error loading screenings: $e");
-      setState(() => isLoading = false);
+      debugPrint("Error loading screenings: $e");
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+        errorMessage = "Failed to load screenings. Please try again.";
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: const Text('Error loading screenings.'), backgroundColor: errorColor),
+      );
     }
   }
 
@@ -63,6 +76,27 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
         padding: const EdgeInsets.fromLTRB(25,defaultPadding,25,defaultPadding),
         child: isLoading
             ? Center(child: CircularProgressIndicator(color: primaryColor))
+            : errorMessage != null
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: errorColor),
+                    const SizedBox(height: 16),
+                    Text(
+                      errorMessage!,
+                      style: const TextStyle(color: errorColor, fontSize: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _loadScreenings,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                      style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white),
+                    ),
+                  ],
+                ),
+              )
             : screenings.isEmpty
             ? Center(
                 child: Text(
@@ -86,12 +120,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 
   Widget _buildScreeningCard(ScreeningModel screening) {
-    // 1. Diagnosis Logic (User Requirement: Use patient's diagnosisStatus if available)
-    // We check the specific screening first. If it's pending, we check if the PATIENT has a status 
-    // that might apply to this screening (assuming it's the latest one).
-    // Complexity: Screening diagnosis is specific to that screening. Patient diagnosis might be general.
-    // However, the user explicitly asked to use the patient's status instead of "pending".
-    
     String displayStatus = "Pending";
     bool isDiagnosed = false;
 

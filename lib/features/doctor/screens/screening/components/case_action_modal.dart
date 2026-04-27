@@ -72,7 +72,8 @@ class _CaseActionModalState extends State<CaseActionModal> {
         );
       }
     } catch (e) {
-      print("Error saving action: $e");
+      debugPrint("Error saving action: $e");
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Failed to save action. Try again."),

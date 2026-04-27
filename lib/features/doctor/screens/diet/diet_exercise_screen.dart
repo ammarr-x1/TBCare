@@ -228,7 +228,7 @@ class _DietExerciseScreenState extends State<DietExerciseScreen> {
                         Row(
                           children: [
                             Text(
-                              "${patients.length}",
+                              "${snapshot.data!.length}",
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w800,

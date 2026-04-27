@@ -25,15 +25,19 @@ class _RecentActivityState extends State<RecentActivity> {
   Future<void> _fetchRecentCases() async {
     try {
       final cases = await RecentCasesService.fetchRecentCases(limit: 5);
-      setState(() {
-        _recentCases = cases;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _recentCases = cases;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 

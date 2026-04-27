@@ -27,6 +27,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
   late Doctor _doctor;
   bool _isLoading = true;
   bool _isEditing = false;
+  String? _errorMessage;
 
   // Controllers for editing
   final _nameController = TextEditingController();
@@ -60,6 +61,10 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
   }
 
   Future<void> _loadDoctorProfile() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final doctor = await _profileService.getCurrentDoctorProfileOnce();
       
@@ -71,10 +76,14 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
         });
       }
     } catch (e) {
+      debugPrint('Error loading profile: $e');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _errorMessage = "Failed to load profile. Please try again.";
+        });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading profile: $e')),
+          const SnackBar(content: Text('Error loading profile.'), backgroundColor: errorColor),
         );
       }
     }
@@ -105,7 +114,34 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      body: _isLoading ? _buildLoadingWidget() : _buildProfileContent(),
+      body: _isLoading 
+          ? _buildLoadingWidget() 
+          : _errorMessage != null 
+              ? _buildErrorWidget()
+              : _buildProfileContent(),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: errorColor),
+          const SizedBox(height: 16),
+          Text(
+            _errorMessage!,
+            style: const TextStyle(color: errorColor, fontSize: 16),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _loadDoctorProfile,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white),
+          ),
+        ],
+      ),
     );
   }
 

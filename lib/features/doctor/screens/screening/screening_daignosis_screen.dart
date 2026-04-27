@@ -16,6 +16,7 @@ class _ScreeningDiagnosisScreenState extends State<ScreeningDiagnosisScreen> {
   List<AiCaseModel> _allCases = [];
   List<AiCaseModel> _filteredCases = [];
   bool isLoading = true;
+  String? errorMessage;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -46,7 +47,10 @@ class _ScreeningDiagnosisScreenState extends State<ScreeningDiagnosisScreen> {
 
   Future<void> fetchScreeningCases() async {
     if (!mounted) return;
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
     try {
       final fetched = await ScreeningService.fetchAiCasesForDoctorDashboard();
       if (!mounted) return;
@@ -56,9 +60,15 @@ class _ScreeningDiagnosisScreenState extends State<ScreeningDiagnosisScreen> {
         isLoading = false;
       });
     } catch (e) {
-      print("Error fetching cases: $e");
+      debugPrint("Error fetching cases: $e");
       if (!mounted) return;
-      setState(() => isLoading = false);
+      setState(() {
+        isLoading = false;
+        errorMessage = "Failed to load screening cases.";
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error loading cases.'), backgroundColor: errorColor),
+      );
     }
   }
 
@@ -134,51 +144,110 @@ class _ScreeningDiagnosisScreenState extends State<ScreeningDiagnosisScreen> {
 
           // Content
           Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator(color: primaryColor))
-                : _filteredCases.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _allCases.isEmpty
-                                  ? Icons.assignment_outlined
-                                  : Icons.search_off,
-                              size: 64,
-                              color: secondaryColor.withOpacity(0.2),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _allCases.isEmpty
-                                  ? "No screenings found"
-                                  : "No patients found matching '${_searchController.text}'",
-                              style: TextStyle(
-                                color: secondaryColor.withOpacity(0.5),
-                                fontSize: bodySize,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (isLoading) {
+                  return const Center(child: CircularProgressIndicator(color: primaryColor));
+                }
+                
+                if (errorMessage != null) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 64, color: errorColor),
+                        const SizedBox(height: 16),
+                        Text(
+                          errorMessage!,
+                          style: TextStyle(
+                            color: errorColor.withOpacity(0.8),
+                            fontSize: bodySize,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      )
-                    : GridView.builder(
-                        padding: const EdgeInsets.all(largePadding),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: MediaQuery.of(context).size.width > 1100
-                              ? 3
-                              : MediaQuery.of(context).size.width > 700
-                                  ? 2
-                                  : 1,
-                          crossAxisSpacing: largePadding,
-                          mainAxisSpacing: largePadding,
-                          childAspectRatio: 0.6,
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: fetchScreeningCases,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                          style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white),
                         ),
-                        itemCount: _filteredCases.length,
-                        itemBuilder: (context, index) {
-                          return AiCaseCard(caseData: _filteredCases[index]);
-                        },
+                      ],
+                    ),
+                  );
+                }
+
+                if (_filteredCases.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _allCases.isEmpty
+                              ? Icons.assignment_outlined
+                              : Icons.search_off,
+                          size: 64,
+                          color: secondaryColor.withOpacity(0.2),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _allCases.isEmpty
+                              ? "No screenings found"
+                              : "No patients found matching '${_searchController.text}'",
+                          style: TextStyle(
+                            color: secondaryColor.withOpacity(0.5),
+                            fontSize: bodySize,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                // Calculate optimal responsive sizing
+                const double minCardWidth = 340.0;
+                const double maxCardWidth = 400.0;
+                
+                double availableWidth = constraints.maxWidth - (2 * largePadding); // Accounting for ListView padding
+                int crossAxisCount = (availableWidth / (minCardWidth + largePadding)).floor();
+                if (crossAxisCount < 1) crossAxisCount = 1;
+                
+                double totalSpacing = (crossAxisCount - 1) * largePadding;
+                double calculatedWidth = (availableWidth - totalSpacing) / crossAxisCount;
+                double itemWidth = calculatedWidth > maxCardWidth ? maxCardWidth : calculatedWidth;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(largePadding),
+                  itemCount: (_filteredCases.length / crossAxisCount).ceil(),
+                  itemBuilder: (context, rowIndex) {
+                    int startIndex = rowIndex * crossAxisCount;
+                    int endIndex = startIndex + crossAxisCount;
+                    if (endIndex > _filteredCases.length) endIndex = _filteredCases.length;
+                    
+                    List<AiCaseModel> rowCases = _filteredCases.sublist(startIndex, endIndex);
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: largePadding),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: List.generate(rowCases.length, (index) {
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              right: index < rowCases.length - 1 ? largePadding : 0,
+                            ),
+                            child: SizedBox(
+                              width: itemWidth,
+                              child: AiCaseCard(caseData: rowCases[index]),
+                            ),
+                          );
+                        }),
                       ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),

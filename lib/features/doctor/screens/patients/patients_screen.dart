@@ -16,6 +16,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
   String selectedFilter = 'All';
   String searchQuery = '';
   bool isLoading = true;
+  String? errorMessage;
 
   final List<String> filters = ['All', 'TB', 'Not TB', 'TB Likely'];
 
@@ -26,16 +27,27 @@ class _PatientsScreenState extends State<PatientsScreen> {
   }
 
   Future<void> fetchPatients() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
     try {
       final data = await PatientService.fetchAllPatients();
+      if (!mounted) return;
       setState(() {
         patients = data;
         isLoading = false;
       });
     } catch (e) {
       debugPrint('Error fetching patients: $e');
-      setState(() => isLoading = false);
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Failed to load patients. Please try again.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: const Text('Error loading patients.'), backgroundColor: errorColor),
+      );
     }
   }
 
@@ -135,6 +147,27 @@ class _PatientsScreenState extends State<PatientsScreen> {
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                    : errorMessage != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, size: 48, color: errorColor),
+                            const SizedBox(height: 16),
+                            Text(
+                              errorMessage!,
+                              style: const TextStyle(color: errorColor, fontSize: 16),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: fetchPatients,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                              style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white),
+                            ),
+                          ],
+                        ),
+                      )
                     : filteredPatients.isEmpty
                     ? Center(
                         child: Text(

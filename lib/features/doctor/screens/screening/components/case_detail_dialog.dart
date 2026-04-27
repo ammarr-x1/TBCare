@@ -16,6 +16,7 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
   String? fetchedNotes;
   String? requestedTest;
   bool isLoadingNotes = true;
+  bool hasErrorFetchingNotes = false;
 
   AiCaseModel get caseData => widget.caseData;
 
@@ -36,12 +37,15 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
           fetchedNotes = details?['notes'] as String?;
           requestedTest = details?['requestedTest'] as String?;
           isLoadingNotes = false;
+          hasErrorFetchingNotes = false;
         });
       }
     } catch (e) {
+      debugPrint("Error fetching diagnosis details: $e");
       if (mounted) {
         setState(() {
           isLoadingNotes = false;
+          hasErrorFetchingNotes = true;
         });
       }
     }
@@ -313,9 +317,17 @@ class _CaseDetailDialogState extends State<CaseDetailDialog> {
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(strokeWidth: 2)))
-                              : Text(
-                                  _getDisplayNotes(),
-                                  style: TextStyle(
+                              : hasErrorFetchingNotes
+                                  ? Row(
+                                      children: [
+                                        Icon(Icons.error_outline, color: errorColor, size: 16),
+                                        const SizedBox(width: 8),
+                                        Text("Failed to load notes.", style: TextStyle(color: errorColor, fontSize: 14)),
+                                      ],
+                                    )
+                                  : Text(
+                                      _getDisplayNotes(),
+                                      style: TextStyle(
                                     fontSize: 14,
                                     height: 1.5,
                                     color: _getDisplayNotes() != 'No notes added yet'

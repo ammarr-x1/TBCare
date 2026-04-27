@@ -50,13 +50,24 @@ class _DiagnoseScreenState extends State<DiagnoseScreen> {
       return;
     }
 
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Authentication error. Please sign in again."),
+          backgroundColor: errorColor,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
       await DiagnosisService.saveDiagnosisAndLabTest(
         patientId: widget.patient.uid,
         screeningId: widget.screening.screeningId,
-        doctorId: FirebaseAuth.instance.currentUser!.uid,
+        doctorId: currentUser.uid,
         diagnosis: _selectedDiagnosis!,
         notes: _notesController.text.trim(),
         requestedTest: _showTestField ? _testController.text.trim() : null,
@@ -73,14 +84,16 @@ class _DiagnoseScreenState extends State<DiagnoseScreen> {
       Navigator.pop(context);
     } catch (e) {
       print("Error saving diagnosis: $e");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
-        SnackBar(
-          content: Text("Failed to save diagnosis"),
-          backgroundColor: errorColor,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(
+          SnackBar(
+            content: Text("Failed to save diagnosis"),
+            backgroundColor: errorColor,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

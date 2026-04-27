@@ -121,14 +121,16 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 )
-                              : Text(
-                                  "$count Patients",
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              : snapshot.hasError
+                                  ? const Icon(Icons.error_outline, color: Colors.white)
+                                  : Text(
+                                      "$count Patients",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                         ],
                       ),
                     ),

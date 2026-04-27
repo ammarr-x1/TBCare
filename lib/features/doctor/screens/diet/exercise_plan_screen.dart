@@ -39,18 +39,22 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
       widget.patientId,
     );
     if (result != null) {
-      setState(() {
-        _planDocId = result['docId'];
-        _planTitle = result['title'] ?? 'Exercise Plan';
-        _approved = result['approvedByDoctor'] ?? false;
-        _items = result['items'] ?? [];
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _planDocId = result['docId'];
+          _planTitle = result['title'] ?? 'Exercise Plan';
+          _approved = result['approvedByDoctor'] ?? false;
+          _items = result['items'] ?? [];
+          _isLoading = false;
+        });
+      }
     } else {
-      setState(() {
-        _planTitle = 'New Exercise Plan';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _planTitle = 'New Exercise Plan';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -84,15 +88,17 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
         item: item,
       );
     } catch (e) {
-      setState(() {
-        _items.remove(item);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to add item: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        setState(() {
+          _items.remove(item);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to add item: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -109,15 +115,17 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
         item: item,
       );
     } catch (e) {
-      setState(() {
-        _items = originalItems;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to remove item: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        setState(() {
+          _items = originalItems;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to remove item: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -128,22 +136,26 @@ class _ExercisePlanScreenState extends State<ExercisePlanScreen> {
         planDocId: _planDocId,
       );
 
-      setState(() {
-        _approved = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Exercise plan approved successfully!"),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        setState(() {
+          _approved = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Exercise plan approved successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to approve plan: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to approve plan: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

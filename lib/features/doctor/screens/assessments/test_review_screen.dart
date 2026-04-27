@@ -42,7 +42,7 @@ class _TestReviewScreenState extends State<TestReviewScreen> {
       });
     } catch (e) {
       print("Error loading tests: $e");
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -54,14 +54,22 @@ class _TestReviewScreenState extends State<TestReviewScreen> {
       return;
     }
 
-    try {
-      final doctorId = FirebaseAuth.instance.currentUser!.uid;
-      
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Authentication error. Please sign in again."),
+          backgroundColor: errorColor,
+        ),
+      );
+      return;
+    }
 
+    try {
       await DiagnosisService.updateFinalVerdict(
         patientId: widget.caseData.patientId,
         screeningId: widget.caseData.screeningId,
-        doctorId: doctorId, 
+        doctorId: currentUser.uid, 
         status: _finalDiagnosis!,
         notes: _remarksController.text.trim(),
       );
@@ -76,14 +84,16 @@ class _TestReviewScreenState extends State<TestReviewScreen> {
       Navigator.pop(context);
     } catch (e) {
       print("Error updating final verdict: $e");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
-        SnackBar(
-          content: Text("Failed to update diagnosis"),
-          backgroundColor: errorColor,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(
+          SnackBar(
+            content: Text("Failed to update diagnosis"),
+            backgroundColor: errorColor,
+          ),
+        );
+      }
     }
   }
 

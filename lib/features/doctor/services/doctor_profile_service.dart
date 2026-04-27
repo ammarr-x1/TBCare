@@ -11,7 +11,7 @@ class DoctorProfileService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   /// Create default Doctor object for new doctors
-  Doctor _createDefaultDoctor(String uid, String? name, String? phone) {
+  Doctor _createDefaultDoctor(String uid, String? name, String? phone, String? email) {
     return Doctor(
       uid: uid,
       name: name ?? 'New Doctor',
@@ -26,7 +26,7 @@ class DoctorProfileService {
       totalRecommendationsGiven: 0,
       totalTestsRequested: 0,
       profileImageUrl: null,
-      email: null,
+      email: email,
       hospital: null,
       experience: null,
       qualifications: null,
@@ -47,8 +47,22 @@ class DoctorProfileService {
       return doctor;
     }
 
+    String? name = user.displayName;
+    String? email = user.email;
+    String? phone = user.phoneNumber;
+
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        if (data['name'] != null && data['name'].toString().isNotEmpty) name = data['name'];
+        if (data['email'] != null && data['email'].toString().isNotEmpty) email = data['email'];
+        if (data['phone'] != null && data['phone'].toString().isNotEmpty) phone = data['phone'];
+      }
+    } catch (_) {}
+
     // Return default doctor if document doesn't exist
-    return _createDefaultDoctor(user.uid, user.displayName, user.phoneNumber);
+    return _createDefaultDoctor(user.uid, name, phone, email);
   }
 
   // Get current doctor profile (stream)
@@ -87,7 +101,7 @@ class DoctorProfileService {
       await _firestore
           .collection('doctors')
           .doc(doctor.uid)
-          .update(doctor.toFirestore());
+          .set(doctor.toFirestore(), SetOptions(merge: true));
     } catch (e) {
       throw Exception('Failed to update doctor profile: $e');
     }

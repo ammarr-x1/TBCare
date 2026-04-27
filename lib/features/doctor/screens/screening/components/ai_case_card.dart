@@ -56,6 +56,7 @@ class _AiCaseCardState extends State<AiCaseCard> {
         final notes = diagnosisData['notes'] as String?;
         final requestedTest = diagnosisData['requestedTest'] as String?;
 
+        if (!mounted) return;
         setState(() {
           caseStatus = status.isNotEmpty ? status : caseStatus;
           doctorNote = notes ?? doctorNote;
@@ -71,17 +72,18 @@ class _AiCaseCardState extends State<AiCaseCard> {
           isLoading = false;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           isLoading = false;
         });
       }
     } catch (e) {
+      debugPrint("Error checking diagnosis status: $e");
+      if (!mounted) return;
       setState(() {
         errorMessage = 'Failed to load diagnosis status';
         isLoading = false;
       });
-      // ignore: avoid_print
-      print("Error checking diagnosis status: $e");
     }
   }
 

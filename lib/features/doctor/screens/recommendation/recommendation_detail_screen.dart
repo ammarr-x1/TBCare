@@ -55,6 +55,7 @@ class _RecommendationDetailScreenState
       _medicalController.clear();
       _lifestyleController.clear();
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Recommendation added"),
@@ -63,6 +64,7 @@ class _RecommendationDetailScreenState
       );
     } catch (e) {
       debugPrint("Error adding recommendation: $e");
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Failed to save recommendation"),
@@ -112,10 +114,17 @@ class _RecommendationDetailScreenState
                 ),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(
+                    return const Center(
                       child: CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
                       ),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return const EmptyStateWidget(
+                      icon: Icons.error_outline,
+                      title: "Error loading data",
+                      subtitle: "Failed to fetch screenings",
                     );
                   }
                   if (!snapshot.hasData || snapshot.data == null) {
@@ -136,10 +145,17 @@ class _RecommendationDetailScreenState
                     builder: (context, recSnapshot) {
                       if (recSnapshot.connectionState ==
                           ConnectionState.waiting) {
-                        return Center(
+                        return const Center(
                           child: CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
                           ),
+                        );
+                      }
+                      if (recSnapshot.hasError) {
+                        return const EmptyStateWidget(
+                          icon: Icons.error_outline,
+                          title: "Error loading data",
+                          subtitle: "Failed to fetch recommendations",
                         );
                       }
                       if (!recSnapshot.hasData || recSnapshot.data!.isEmpty) {
